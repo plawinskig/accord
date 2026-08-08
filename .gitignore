@@ -1,0 +1,40 @@
+# =========================
+# Node.js & SvelteKit (Frontend)
+# =========================
+node_modules/
+.svelte-kit/
+build/
+dist/
+npm-debug.log*
+
+# =========================
+# Rust & Tauri (Backend)
+# =========================
+src-tauri/target/
+# Uwaga: Pliki Cargo.lock oraz Cargo.toml zostawiamy do śledzenia przez Gita!
+
+# =========================
+# Baza Danych (sqlx) i Zmienne Środowiskowe
+# =========================
+src-tauri/.env
+src-tauri/dev.sqlite
+src-tauri/dev.sqlite-wal
+src-tauri/dev.sqlite-shm
+# (Folder src-tauri/.sqlx, który powstanie później przy "offline mode", BĘDZIE śledzony)
+
+# Zabezpieczenie przed przypadkowym dodaniem produkcyjnych baz danych
+*.db
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# =========================
+# OS & IDE (System i VS Code)
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
