@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS folders (
+    id TEXT PRIMARY KEY,
+    parent_id TEXT,
+    name TEXT NOT NULL,
+    is_deleted BOOLEAN NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
