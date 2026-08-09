@@ -2,5 +2,12 @@
   "svelte.enable-ts-plugin": true,
   "files.associations": {
     "*.css": "tailwindcss"
-  }
+  },
+  "VsCodeTaskButtons.tasks": [
+    {
+      "label": "Tauri Dev",
+      "task": "Tauri Dev",
+      "tooltip": "Uruchamia serwer developerski Tauri"
+    }
+  ]
 }
