@@ -20,7 +20,15 @@ pub async fn get_folders(state: State<'_, AppState>) -> Result<Vec<Folder>, Stri
     // sort alphabetically
     let folders = sqlx::query_as!(
         Folder,
-        "SELECT id, parent_id, name FROM folders WHERE is_deleted = 0 ORDER BY name ASC"
+        r#"
+        SELECT 
+            id as "id!", 
+            parent_id, 
+            name as "name!" 
+        FROM folders 
+        WHERE is_deleted = 0 
+        ORDER BY name ASC
+        "#
     )
     .fetch_all(pool)
     .await
