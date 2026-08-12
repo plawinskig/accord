@@ -23,7 +23,8 @@ fn main() {
             workspace::set_workspace,
             db::connect_to_db,
             folders::get_folders,
-            folders::create_folder
+            folders::create_folder,
+            folders::soft_delete_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

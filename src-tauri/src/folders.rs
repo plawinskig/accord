@@ -56,3 +56,16 @@ pub async fn create_folder(name: String, parent_id: Option<String>, state: State
     // return the created folder to the interface so that it is displayed immediately
     Ok(Folder { id, parent_id, name })
 }
+
+#[tauri::command]
+pub async fn soft_delete_folder(id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let db_guard = state.db.lock().await;
+    let pool = db_guard.as_ref().ok_or("Database not connected")?;
+
+    sqlx::query!("UPDATE folders SET is_deleted = 1 WHERE id = ?", id)
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
