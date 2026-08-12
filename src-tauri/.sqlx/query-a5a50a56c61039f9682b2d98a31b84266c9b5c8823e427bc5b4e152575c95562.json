@@ -1,10 +1,10 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, parent_id, name FROM folders WHERE is_deleted = 0 ORDER BY name ASC",
+  "query": "\n        SELECT \n            id as \"id!\", \n            parent_id, \n            name as \"name!\" \n        FROM folders \n        WHERE is_deleted = 0 \n        ORDER BY name ASC\n        ",
   "describe": {
     "columns": [
       {
-        "name": "id",
+        "name": "id!",
         "ordinal": 0,
         "type_info": "Text"
       },
@@ -14,7 +14,7 @@
         "type_info": "Text"
       },
       {
-        "name": "name",
+        "name": "name!",
         "ordinal": 2,
         "type_info": "Text"
       }
@@ -28,5 +28,5 @@
       false
     ]
   },
-  "hash": "db034132567c44546f1803133879a5f459980d68ffc30f79e34307b4051906f1"
+  "hash": "a5a50a56c61039f9682b2d98a31b84266c9b5c8823e427bc5b4e152575c95562"
 }
