@@ -5,6 +5,7 @@ use tokio::sync::Mutex;
 
 mod workspace;
 mod db;
+mod folders;
 
 // app memory
 pub struct AppState {
@@ -20,7 +21,9 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             workspace::get_workspace,
             workspace::set_workspace,
-            db::connect_to_db
+            db::connect_to_db,
+            folders::get_folders,
+            folders::create_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
