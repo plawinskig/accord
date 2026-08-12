@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { invoke } from '@tauri-apps/api/core';
 	import { open } from '@tauri-apps/plugin-dialog';
+	import Sidebar from '$lib/Sidebar.svelte';
 
 	let workspace: string | null = null;
 	let loading = true;
@@ -75,11 +76,29 @@
 			</button>
 		</div>
 	{:else if dbConnected}
-		<!-- db works -->
-		<div class="text-center">
-			<h1 class="mb-2 text-2xl font-bold text-green-400">System Ready & Database Connected!</h1>
-			<p class="text-gray-400">{workspace}</p>
-			<p class="mt-4 text-sm text-gray-500">The core engine is running. Next up: building the UI.</p>
+		<!-- MAIN APPLICATION INTERFACE -->
+		<div class="flex h-screen w-screen overflow-hidden bg-[#313338] text-white">
+			
+			<!-- 1. left column: channel/folder list -->
+			<Sidebar />
+			
+			<!-- 2. mid column: chat space -->
+			<div class="flex flex-1 flex-col">
+				<div class="flex h-12 items-center border-b border-[#2b2d31] px-4 font-bold shadow-sm">
+					<span class="mr-2 text-xl text-gray-500">#</span>
+					general
+				</div>
+				<div class="flex flex-1 items-center justify-center text-gray-500">
+					Select a channel to view notes
+				</div>
+			</div>
+
+			<!-- 3. right column: space for tags and search -->
+			<div class="hidden w-60 bg-[#2b2d31] border-l border-[#1e1f22] lg:block">
+				<div class="flex h-12 items-center justify-center border-b border-[#1e1f22] px-4 text-sm text-gray-400">
+					Tags & Search (Soon)
+				</div>
+			</div>
 		</div>
 	{/if}
 </main>
