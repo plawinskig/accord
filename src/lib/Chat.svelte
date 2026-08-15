@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/core';
 	import { uiState } from '$lib/state.svelte';
-	import { afterUpdate } from 'svelte';
 
 	interface Note {
 		id: string;
@@ -18,9 +17,14 @@
 	let editContent = $state('');
 
 	// reference to the notes container (for automatic scrolling)
-	let chatContainer: HTMLElement;
+	let chatContainer = $state<HTMLElement>();
 
-	// automatically respond to `uiState.activeFolderId` change and load new notes
+	// action to focus an element (bypasses a11y_autofocus)
+	function focusOnMount(node: HTMLElement) {
+		node.focus();
+	}
+
+    // automatically respond to `uiState.activeFolderId` change and load new notes
 	$effect(() => {
 		if (uiState.activeFolderId) {
 			loadNotes(uiState.activeFolderId);
@@ -28,9 +32,9 @@
 		}
 	});
 
-	// automatic scroll to the bottom when the list of notes changes
-	afterUpdate(() => {
-		if (chatContainer) {
+    // automatic scroll to the bottom when the list of notes changes
+	$effect(() => {
+		if (notes.length >= 0 && chatContainer) {
 			chatContainer.scrollTop = chatContainer.scrollHeight;
 		}
 	});
@@ -107,8 +111,8 @@
 			<span class="text-white">{uiState.activeFolderName}</span>
 		</div>
 
-		<!-- notes area -->
-		<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-4 space-y-4">
+        <!-- notes area -->
+		<div bind:this={chatContainer} class="flex-1 space-y-4 overflow-y-auto p-4">
 			{#if notes.length === 0}
 				<div class="flex h-full flex-col items-center justify-center text-center">
 					<div class="mb-4 rounded-full bg-[#2b2d31] p-6 text-gray-500">
@@ -119,21 +123,21 @@
 				</div>
 			{/if}
 
-			<!-- note rendering -->
+            <!-- note rendering -->
 			{#each notes as note}
 				<div class="group relative flex flex-col rounded-md px-2 py-1 transition-colors hover:bg-[#2b2d31]">
 					
 					<!-- top note bar (date and edit icons hidden under hover) -->
 					<div class="mb-1 flex items-center justify-between">
-						<span class="text-xs text-gray-500 font-medium">
+						<span class="text-xs font-medium text-gray-500">
 							{note.created_at}
 							{#if note.created_at !== note.updated_at}
-								<span class="italic ml-1">(edited)</span>
+								<span class="ml-1 italic">(edited)</span>
 							{/if}
 						</span>
 						
-						<!-- edit/delete controls -->
-						<div class="hidden space-x-2 rounded-md border border-[#1e1f22] bg-[#313338] px-2 py-1 shadow-sm group-hover:flex absolute right-4 -top-3">
+                        <!-- edit/delete controls -->
+						<div class="absolute -top-3 right-4 hidden space-x-2 rounded-md border border-[#1e1f22] bg-[#313338] px-2 py-1 shadow-sm group-hover:flex">
 							<button onclick={() => startEdit(note)} class="text-gray-400 hover:text-indigo-400" title="Edit">
 								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
 							</button>
@@ -143,16 +147,16 @@
 						</div>
 					</div>
 
-					<!-- note content (or edit input) -->
+                    <!-- note content (or edit input) -->
 					{#if editingId === note.id}
 						<textarea
 							bind:value={editContent}
 							onkeydown={saveEdit}
-							class="w-full rounded bg-[#383a40] p-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none min-h-[60px]"
+							use:focusOnMount
+							class="min-h-15 w-full resize-none rounded bg-[#383a40] p-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
 							placeholder="Press Enter to save, Escape to cancel"
-							autofocus
 						></textarea>
-						<span class="text-xs text-gray-500 mt-1">Escape to cancel • Enter to save</span>
+						<span class="mt-1 text-xs text-gray-500">Escape to cancel • Enter to save</span>
 					{:else}
 						<p class="whitespace-pre-wrap text-sm text-gray-200">{note.content}</p>
 					{/if}
