@@ -3,6 +3,7 @@
 	import { invoke } from '@tauri-apps/api/core';
 	import { open } from '@tauri-apps/plugin-dialog';
 	import Sidebar from '$lib/Sidebar.svelte';
+	import Chat from '$lib/Chat.svelte';
 
 	let workspace: string | null = null;
 	let loading = true;
@@ -84,13 +85,7 @@
 			
 			<!-- 2. mid column: chat space -->
 			<div class="flex flex-1 flex-col">
-				<div class="flex h-12 items-center border-b border-[#2b2d31] px-4 font-bold shadow-sm">
-					<span class="mr-2 text-xl text-gray-500">#</span>
-					general
-				</div>
-				<div class="flex flex-1 items-center justify-center text-gray-500">
-					Select a channel to view notes
-				</div>
+				<Chat />
 			</div>
 
 			<!-- 3. right column: space for tags and search -->
