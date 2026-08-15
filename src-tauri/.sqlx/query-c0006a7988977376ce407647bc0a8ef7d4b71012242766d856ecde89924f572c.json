@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT \n            id as \"id!\", \n            folder_id as \"folder_id!\", \n            content as \"content!\", \n            DATETIME(created_at, 'localtime') as \"created_at!: String\", \n            DATETIME(updated_at, 'localtime') as \"updated_at!: String\" \n        FROM notes \n        WHERE id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "folder_id!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "content!",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 3,
+        "type_info": "Null"
+      },
+      {
+        "name": "updated_at!: String",
+        "ordinal": 4,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "c0006a7988977376ce407647bc0a8ef7d4b71012242766d856ecde89924f572c"
+}
