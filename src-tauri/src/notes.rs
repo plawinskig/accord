@@ -12,7 +12,7 @@ pub struct Note {
     pub updated_at: String,
 }
 
-// Pobieranie wszystkich notatek z konkretnego folderu (posortowane od najstarszej, jak na czacie)
+// download all notes from a specific folder
 #[tauri::command]
 pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<Vec<Note>, String> {
     let db_guard = state.db.lock().await;
@@ -25,8 +25,8 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
             id as "id!", 
             folder_id as "folder_id!", 
             content as "content!", 
-            DATETIME(created_at, 'localtime') as "created_at!", 
-            DATETIME(updated_at, 'localtime') as "updated_at!"
+            DATETIME(created_at, 'localtime') as "created_at!: String", 
+            DATETIME(updated_at, 'localtime') as "updated_at!: String"
         FROM notes 
         WHERE folder_id = ? AND is_deleted = 0 
         ORDER BY created_at ASC
@@ -40,7 +40,7 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
     Ok(notes)
 }
 
-// Dodawanie nowej notatki
+// Add new note
 #[tauri::command]
 pub async fn create_note(folder_id: String, content: String, state: State<'_, AppState>) -> Result<Note, String> {
     let db_guard = state.db.lock().await;
@@ -56,10 +56,18 @@ pub async fn create_note(folder_id: String, content: String, state: State<'_, Ap
     .await
     .map_err(|e| e.to_string())?;
 
-    // Dla wygody pobieramy ją z powrotem, by mieć poprawne daty prosto z bazy
     let new_note = sqlx::query_as!(
         Note,
-        r#"SELECT id as "id!", folder_id as "folder_id!", content as "content!", DATETIME(created_at, 'localtime') as "created_at!", DATETIME(updated_at, 'localtime') as "updated_at!" FROM notes WHERE id = ?"#,
+        r#"
+        SELECT 
+            id as "id!", 
+            folder_id as "folder_id!", 
+            content as "content!", 
+            DATETIME(created_at, 'localtime') as "created_at!: String", 
+            DATETIME(updated_at, 'localtime') as "updated_at!: String" 
+        FROM notes 
+        WHERE id = ?
+        "#,
         id
     )
     .fetch_one(pool)
@@ -69,7 +77,7 @@ pub async fn create_note(folder_id: String, content: String, state: State<'_, Ap
     Ok(new_note)
 }
 
-// Aktualizacja (edycja) notatki
+// Edit the note
 #[tauri::command]
 pub async fn update_note(id: String, content: String, state: State<'_, AppState>) -> Result<(), String> {
     let db_guard = state.db.lock().await;
@@ -86,7 +94,7 @@ pub async fn update_note(id: String, content: String, state: State<'_, AppState>
     Ok(())
 }
 
-// Miękkie usunięcie do kosza
+// Soft delete to trash
 #[tauri::command]
 pub async fn soft_delete_note(id: String, state: State<'_, AppState>) -> Result<(), String> {
     let db_guard = state.db.lock().await;
