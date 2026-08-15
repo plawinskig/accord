@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/core';
 	import { onMount } from 'svelte';
+	import { uiState } from '$lib/state.svelte';
 
 	interface Folder {
 		id: string;
@@ -68,6 +69,11 @@
 		if (confirm(`Are you sure you want to delete #${name} and all its contents?`)) {
 			try {
 				await invoke('soft_delete_folder', { id });
+				// if deleted active folder, clear the state
+				if (uiState.activeFolderId === id) {
+					uiState.activeFolderId = null;
+					uiState.activeFolderName = null;
+				}
 				await loadFolders();
 			} catch (e) {
 				console.error('Failed to delete folder', e);
@@ -83,28 +89,33 @@
 <!-- RECURSIVE SNIPPET TO RENDER FOLDER TREE -->
 {#snippet folderNode(node: TreeNode, depth: number)}
 	<!-- render the folder itself, the indentation increases with each depth -->
+
+	<!-- clicking sets this folder as the active one globally -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div 
-		class="group flex cursor-pointer items-center justify-between rounded py-1.5 pr-2 text-gray-400 transition-colors hover:bg-[#35373c] hover:text-gray-200"
+		onclick={() => { uiState.activeFolderId = node.id; uiState.activeFolderName = node.name; }}
+		class="group flex cursor-pointer items-center justify-between rounded py-1.5 pr-2 transition-colors {uiState.activeFolderId === node.id ? 'bg-[#404249] text-white' : 'text-gray-400 hover:bg-[#35373c] hover:text-gray-200'}"
 		style="padding-left: calc(0.5rem + {depth} * 1rem);"
 	>
 		<div class="flex flex-1 items-center truncate">
-			<span class="mr-2 text-xl text-gray-500">#</span>
-			<span class="truncate">{node.name}</span>
+			<span class="mr-2 text-xl {uiState.activeFolderId === node.id ? 'text-gray-300' : 'text-gray-500'}">#</span>
+			<span class="truncate font-medium">{node.name}</span>
 		</div>
 		
 		<!-- action buttons (appear on mouse hover) -->
 		<div class="hidden items-center space-x-1 group-hover:flex">
 			<button 
-				onclick={() => addSubFolder(node.id)} 
-				class="text-gray-500 transition-colors hover:text-green-400" 
+				onclick={(e) => { e.stopPropagation(); addSubFolder(node.id); }} 
+				class="text-gray-400 transition-colors hover:text-green-400" 
 				title="Add subchannel"
 			>
 				<!-- plus icon -->
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
 			</button>
 			<button 
-				onclick={() => deleteFolder(node.id, node.name)} 
-				class="ml-1 text-gray-500 transition-colors hover:text-red-400" 
+				onclick={(e) => { e.stopPropagation(); deleteFolder(node.id, node.name); }} 
+				class="ml-1 text-gray-400 transition-colors hover:text-red-400" 
 				title="Delete channel"
 			>
 				<!-- trash icon -->
