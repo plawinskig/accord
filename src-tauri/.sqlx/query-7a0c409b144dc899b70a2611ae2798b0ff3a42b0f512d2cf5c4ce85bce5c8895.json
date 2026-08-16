@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        WITH RECURSIVE deleted_folders AS (\n            SELECT id FROM folders WHERE is_deleted = 1\n            UNION ALL\n            SELECT f.id FROM folders f\n            INNER JOIN deleted_folders df ON f.parent_id = df.id\n        )\n        SELECT \n            n.id as \"note_id!\", \n            n.folder_id as \"folder_id!\", \n            f.name as \"folder_name!\",\n            snippet(notes_fts, 0, '<mark class=\"bg-indigo-500/80 text-white rounded px-1\">', '</mark>', '...', 15) as \"snippet!: String\",\n            DATETIME(n.created_at, 'localtime') as \"created_at!: String\"\n        FROM notes_fts fts\n        JOIN notes n ON fts.note_id = n.id\n        JOIN folders f ON n.folder_id = f.id\n        WHERE notes_fts MATCH ? \n          AND n.is_deleted = 0\n          AND n.folder_id NOT IN (SELECT id FROM deleted_folders)\n        ORDER BY rank\n        LIMIT 20\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "note_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "folder_id!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "folder_name!",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "snippet!: String",
+        "ordinal": 3,
+        "type_info": "Null"
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 4,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "7a0c409b144dc899b70a2611ae2798b0ff3a42b0f512d2cf5c4ce85bce5c8895"
+}
