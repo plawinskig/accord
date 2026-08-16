@@ -16,19 +16,17 @@ pub async fn search_notes(query: String, state: State<'_, AppState>) -> Result<V
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
-    // Aby uniknąć błędów składni FTS5 (np. gdy użytkownik wpisze dziwne znaki),
-    // dodajemy gwiazdkę na koniec, co pozwala na wyszukiwanie częściowych słów.
-    // Zastępujemy też podwójne cudzysłowy, by nie zepsuć zapytania.
+    // to avoid FTS5 syntax errors,
+    // add an asterisk at the end, which allows for partial-word searches
+    // also replace double quotation marks so as not to break the query
     let safe_query = format!("\"{}\"*", query.replace("\"", "\"\""));
 
     let results = sqlx::query_as!(
         SearchResult,
         r#"
         WITH RECURSIVE deleted_folders AS (
-            -- Krok 1: Znajdź wszystkie foldery bezpośrednio w koszu
             SELECT id FROM folders WHERE is_deleted = 1
             UNION ALL
-            -- Krok 2: Znajdź wszystkie podfoldery, których rodzic jest w koszu (Rekurencja!)
             SELECT f.id FROM folders f
             INNER JOIN deleted_folders df ON f.parent_id = df.id
         )
@@ -36,7 +34,6 @@ pub async fn search_notes(query: String, state: State<'_, AppState>) -> Result<V
             n.id as "note_id!", 
             n.folder_id as "folder_id!", 
             f.name as "folder_name!",
-            -- Baza sama wycina fragment tekstu i podświetla znalezione słowo!
             snippet(notes_fts, 0, '<mark class="bg-indigo-500/80 text-white rounded px-1">', '</mark>', '...', 15) as "snippet!: String",
             DATETIME(n.created_at, 'localtime') as "created_at!: String"
         FROM notes_fts fts
@@ -44,7 +41,6 @@ pub async fn search_notes(query: String, state: State<'_, AppState>) -> Result<V
         JOIN folders f ON n.folder_id = f.id
         WHERE notes_fts MATCH ? 
           AND n.is_deleted = 0
-          -- Krok 3: Odrzuć notatki, jeśli ich folder znajduje się na liście usuniętych
           AND n.folder_id NOT IN (SELECT id FROM deleted_folders)
         ORDER BY rank
         LIMIT 20
