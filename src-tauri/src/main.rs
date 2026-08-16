@@ -7,6 +7,7 @@ mod workspace;
 mod db;
 mod folders;
 mod notes;
+mod search;
 
 // app memory
 pub struct AppState {
@@ -29,7 +30,8 @@ fn main() {
             notes::get_notes,
             notes::create_note,
             notes::update_note,
-            notes::soft_delete_note
+            notes::soft_delete_note,
+            search::search_notes
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
