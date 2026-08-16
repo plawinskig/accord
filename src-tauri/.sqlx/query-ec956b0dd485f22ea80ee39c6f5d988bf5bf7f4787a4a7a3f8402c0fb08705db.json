@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        WITH RECURSIVE deleted_folders AS (\n            -- Krok 1: Znajdź wszystkie foldery bezpośrednio w koszu\n            SELECT id FROM folders WHERE is_deleted = 1\n            UNION ALL\n            -- Krok 2: Znajdź wszystkie podfoldery, których rodzic jest w koszu (Rekurencja!)\n            SELECT f.id FROM folders f\n            INNER JOIN deleted_folders df ON f.parent_id = df.id\n        )\n        SELECT \n            n.id as \"note_id!\", \n            n.folder_id as \"folder_id!\", \n            f.name as \"folder_name!\",\n            -- Baza sama wycina fragment tekstu i podświetla znalezione słowo!\n            snippet(notes_fts, 0, '<mark class=\"bg-indigo-500/80 text-white rounded px-1\">', '</mark>', '...', 15) as \"snippet!: String\",\n            DATETIME(n.created_at, 'localtime') as \"created_at!: String\"\n        FROM notes_fts fts\n        JOIN notes n ON fts.note_id = n.id\n        JOIN folders f ON n.folder_id = f.id\n        WHERE notes_fts MATCH ? \n          AND n.is_deleted = 0\n          -- Krok 3: Odrzuć notatki, jeśli ich folder znajduje się na liście usuniętych\n          AND n.folder_id NOT IN (SELECT id FROM deleted_folders)\n        ORDER BY rank\n        LIMIT 20\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "note_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "folder_id!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "folder_name!",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "snippet!: String",
+        "ordinal": 3,
+        "type_info": "Null"
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 4,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "ec956b0dd485f22ea80ee39c6f5d988bf5bf7f4787a4a7a3f8402c0fb08705db"
+}
