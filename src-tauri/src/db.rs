@@ -3,11 +3,11 @@ use std::path::Path;
 use std::str::FromStr;
 use tauri::State;
 use crate::AppState;
-use crate::constants;
+use crate::constants::DB_FILE_NAME;
 
 // internal function connecting to the database in workspace
 pub async fn init_db(workspace_path: &str) -> Result<SqlitePool, String> {
-    let db_path = Path::new(workspace_path).join(constants::DB_FILE_NAME);
+    let db_path = Path::new(workspace_path).join(DB_FILE_NAME);
     let db_url = format!("sqlite://{}", db_path.to_string_lossy());
 
     // set options: create a file if it does not exist and use WAL mode for security

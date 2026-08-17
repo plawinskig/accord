@@ -2,7 +2,7 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use crate::constants;
+use crate::constants::{APP_QUALIFIER, APP_ORG, APP_NAME, ATTACHMENTS_DIR};
 
 // structure to save as a JSON file in the system
 #[derive(Serialize, Deserialize)]
@@ -12,7 +12,7 @@ pub struct AppConfig {
 
 // finds the system settings folder (~/.config/accord on Linux)
 pub fn get_config_path() -> Option<PathBuf> {
-    if let Some(proj_dirs) = ProjectDirs::from(constants::APP_QUALIFIER, constants::APP_ORG, constants::APP_NAME) {
+    if let Some(proj_dirs) = ProjectDirs::from(APP_QUALIFIER, APP_ORG, APP_NAME) {
         let config_dir = proj_dirs.config_dir();
         // if the settings folder does not exist create it
         if !config_dir.exists() {
@@ -44,7 +44,7 @@ pub fn set_workspace(path: String) -> Result<(), String> {
     // create a main workspace folder and a subfolder for attachments
     let workspace_dir = PathBuf::from(&path);
     fs::create_dir_all(&workspace_dir).map_err(|e| e.to_string())?;
-    fs::create_dir_all(workspace_dir.join(constants::ATTACHMENTS_DIR)).map_err(|e| e.to_string())?;
+    fs::create_dir_all(workspace_dir.join(ATTACHMENTS_DIR)).map_err(|e| e.to_string())?;
 
     // save selection in the config.json file
     let config = AppConfig { workspace_path: path };

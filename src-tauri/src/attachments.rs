@@ -4,7 +4,7 @@ use std::path::Path;
 use tauri::State;
 use uuid::Uuid;
 use crate::AppState;
-use crate::constants;
+use crate::constants::ATTACHMENTS_DIR;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
 #[serde(rename_all = "UPPERCASE")]
@@ -64,7 +64,7 @@ pub async fn attach_file_copy(
         format!("{}.{}", id, ext)
     };
 
-    let target_path = Path::new(workspace).join(constants::ATTACHMENTS_DIR).join(&new_file_name);
+    let target_path = Path::new(workspace).join(ATTACHMENTS_DIR).join(&new_file_name);
 
     // copy the file to the hidden folder
     fs::copy(&source_path, &target_path).map_err(|e| format!("Failed to copy file: {}", e))?;
