@@ -6,7 +6,7 @@
 	let results = $state<any[]>([]);
 	let isFocused = $state(false);
 	
-	// Timer do "debounce" - czekamy chwilę po puszczeniu klawisza zanim uderzymy do bazy
+	// wait a moment after releasing the key before sending a signal to the base
 	let debounceTimer: ReturnType<typeof setTimeout>;
 
 	async function performSearch() {
@@ -28,16 +28,16 @@
 	}
 
 	function selectResult(result: any) {
-		// 1. Zmieniamy aktywny folder na ten z notatki
+		// change the active folder to the one from the note
 		uiState.activeFolderId = result.folder_id;
 		uiState.activeFolderName = result.folder_name;
 		
-		// 2. Dajemy Svelte chwilę na wyrenderowanie czatu, a potem wskazujemy notatkę do podświetlenia
+		// a moment to render the chat and then specify the note to highlight
 		setTimeout(() => {
 			uiState.highlightNoteId = result.note_id;
 		}, 50);
 
-		// 3. Resetujemy wyszukiwarkę
+		// reset the search engine
 		query = '';
 		results = [];
 		isFocused = false;
@@ -45,7 +45,7 @@
 </script>
 
 <div class="relative w-full max-w-sm">
-	<!-- Pasek wpisywania -->
+	<!-- input bar -->
 	<div class="relative flex items-center">
 		<input
 			type="text"
@@ -61,15 +61,15 @@
 		</svg>
 	</div>
 
-	<!-- Wyskakujące okienko (Dropdown) z wynikami -->
+	<!-- pop-up window (dropdown) with results -->
 	{#if isFocused && query.length >= 2}
-		<div class="absolute right-0 top-10 z-50 w-[400px] overflow-hidden rounded-md border border-[#1e1f22] bg-[#2b2d31] shadow-xl">
+		<div class="absolute right-0 top-10 z-50 w-100 overflow-hidden rounded-md border border-[#1e1f22] bg-[#2b2d31] shadow-xl">
 			{#if results.length === 0}
 				<div class="p-4 text-center text-sm text-gray-500">No results found.</div>
 			{:else}
 				<div class="max-h-[60vh] overflow-y-auto py-2">
 					{#each results as result}
-						<!-- Używamy onmousedown zamiast onclick, aby odpaliło się ZANIM input zgubi focus (onblur) -->
+						<!-- use `onmousedown` instead of `onclick` so that it triggers BEFORE the input loses focus (`onblur`) -->
 						<button 
 							onmousedown={(e) => { e.preventDefault(); selectResult(result); }}
 							class="w-full border-b border-[#1e1f22] px-4 py-3 text-left transition-colors hover:bg-[#35373c] last:border-0"
@@ -78,7 +78,7 @@
 								<span class="text-xs font-bold text-gray-400">#{result.folder_name}</span>
 								<span class="text-xs text-gray-500">{result.created_at.substring(0, 10)}</span>
 							</div>
-							<!-- renderowanie snippetu z podświetleniem (HTML z bazy!) -->
+							<!-- render a snippet with highlighting -->
 							<div class="text-sm text-gray-300">
 								{@html result.snippet}
 							</div>
