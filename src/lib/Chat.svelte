@@ -39,6 +39,18 @@
 		}
 	});
 
+	$effect(() => {
+		if (uiState.highlightNoteId) {
+			const el = document.getElementById(`note-${uiState.highlightNoteId}`);
+			if (el) {
+				el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				setTimeout(() => {
+					uiState.highlightNoteId = null;
+				}, 2500);
+			}
+		}
+	});
+
 	async function loadNotes(folderId: string) {
 		try {
 			notes = await invoke('get_notes', { folderId });
@@ -125,7 +137,10 @@
 
             <!-- note rendering -->
 			{#each notes as note}
-				<div class="group relative flex flex-col rounded-md px-2 py-1 transition-colors hover:bg-[#2b2d31]">
+				<div 
+                    id="note-{note.id}" 
+                    class="group relative flex flex-col rounded-md px-2 py-1 transition-all duration-1000 {uiState.highlightNoteId === note.id ? 'bg-indigo-500/20 ring-1 ring-indigo-500' : 'hover:bg-[#2b2d31]'}"
+                >
 					
 					<!-- top note bar (date and edit icons hidden under hover) -->
 					<div class="mb-1 flex items-center justify-between">
