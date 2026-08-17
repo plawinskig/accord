@@ -9,6 +9,7 @@ mod folders;
 mod notes;
 mod search;
 mod attachments;
+mod constants;
 
 // app memory
 pub struct AppState {
