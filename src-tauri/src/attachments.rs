@@ -4,13 +4,32 @@ use std::path::Path;
 use tauri::State;
 use uuid::Uuid;
 use crate::AppState;
+use crate::workspace::ATTACHMENTS_DIR;
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum OperationType {
+    Copy,
+    Move,
+    Link,
+}
+
+impl OperationType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Copy => "COPY",
+            Self::Move => "MOVE",
+            Self::Link => "LINK",
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Attachment {
     pub id: String,
     pub note_id: String,
     pub original_name: String,
-    pub operation_type: String,
+    pub operation_type: OperationType,
     pub local_path: String,
     pub mime_type: String,
 }
@@ -45,15 +64,18 @@ pub async fn attach_file_copy(
         format!("{}.{}", id, ext)
     };
 
-    let target_path = Path::new(workspace).join("attachments").join(&new_file_name);
+    let target_path = Path::new(workspace).join(ATTACHMENTS_DIR).join(&new_file_name);
 
     // copy the file to the hidden folder
     fs::copy(&source_path, &target_path).map_err(|e| format!("Failed to copy file: {}", e))?;
 
+    let op_type = OperationType::Copy;
+    let op_type_str = op_type.as_str();
+
     // attempt to save a record to the database
     let result = sqlx::query!(
-        "INSERT INTO attachments (id, note_id, original_name, operation_type, local_path, mime_type) VALUES (?, ?, ?, 'COPY', ?, ?)",
-        id, note_id, original_name, new_file_name, mime_type
+        "INSERT INTO attachments (id, note_id, original_name, operation_type, local_path, mime_type) VALUES (?, ?, ?, ?, ?, ?)",
+        id, note_id, original_name, op_type_str, new_file_name, mime_type
     )
     .execute(pool)
     .await;
@@ -65,7 +87,7 @@ pub async fn attach_file_copy(
                 id,
                 note_id,
                 original_name,
-                operation_type: "COPY".to_string(),
+                operation_type: op_type,
                 local_path: new_file_name,
                 mime_type,
             })
