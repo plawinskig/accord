@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
+pub const ATTACHMENTS_DIR: &str = "attachments";
+
 // structure to save as a JSON file in the system
 #[derive(Serialize, Deserialize)]
 pub struct AppConfig {
@@ -43,8 +45,8 @@ pub fn set_workspace(path: String) -> Result<(), String> {
     // create a main workspace folder and a subfolder for attachments
     let workspace_dir = PathBuf::from(&path);
     fs::create_dir_all(&workspace_dir).map_err(|e| e.to_string())?;
-    fs::create_dir_all(workspace_dir.join("attachments")).map_err(|e| e.to_string())?;
-    
+    fs::create_dir_all(workspace_dir.join(ATTACHMENTS_DIR)).map_err(|e| e.to_string())?;
+
     // save selection in the config.json file
     let config = AppConfig { workspace_path: path };
     let config_json = serde_json::to_string(&config).map_err(|e| e.to_string())?;
