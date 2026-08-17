@@ -32,13 +32,13 @@ pub async fn attach_file_copy(
 
     let id = Uuid::new_v4().to_string();
     
-    // 1. Wyciągamy rozszerzenie z oryginalnej nazwy (np. "png", "pdf")
+    // get file extension from the original filename
     let ext = Path::new(&original_name)
         .extension()
         .and_then(|os_str| os_str.to_str())
         .unwrap_or("");
         
-    // 2. Generujemy bezpieczną nazwę piku (UUID.rozszerzenie)
+    // generate a secure file name UUID.extension
     let new_file_name = if ext.is_empty() {
         id.clone()
     } else {
@@ -47,10 +47,10 @@ pub async fn attach_file_copy(
 
     let target_path = Path::new(workspace).join("attachments").join(&new_file_name);
 
-    // 3. Kopiujemy plik fizycznie do naszego ukrytego folderu
+    // copy the file to the hidden folder
     fs::copy(&source_path, &target_path).map_err(|e| format!("Failed to copy file: {}", e))?;
 
-    // 4. TRANSAKCYJNOŚĆ: Próbujemy zapisać wpis w bazie danych
+    // attempt to save a record to the database
     let result = sqlx::query!(
         "INSERT INTO attachments (id, note_id, original_name, operation_type, local_path, mime_type) VALUES (?, ?, ?, 'COPY', ?, ?)",
         id, note_id, original_name, new_file_name, mime_type
@@ -58,7 +58,7 @@ pub async fn attach_file_copy(
     .execute(pool)
     .await;
 
-    // 5. Sprawdzamy, czy baza przyjęła dane
+    // check to see if the database has accepted the data
     match result {
         Ok(_) => {
             Ok(Attachment {
@@ -71,8 +71,6 @@ pub async fn attach_file_copy(
             })
         }
         Err(e) => {
-            // ROLLBACK: Baza rzuciła błąd (np. brak notatki o takim ID). 
-            // Cicho usuwamy skopiowany plik z dysku, żeby nie śmiecić!
             let _ = fs::remove_file(target_path); 
             Err(e.to_string())
         }
