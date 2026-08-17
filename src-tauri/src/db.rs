@@ -36,6 +36,8 @@ pub async fn connect_to_db(workspace_path: String, state: State<'_, AppState>) -
     
     // save the connection pool in the application's memory (state) so that other functions can access it
     *state.db.lock().await = Some(pool);
+    // save the path so the attachments module can access it
+    *state.workspace_path.lock().await = Some(workspace_path);
     
     Ok(())
 }
