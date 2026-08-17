@@ -8,6 +8,7 @@ mod db;
 mod folders;
 mod notes;
 mod search;
+mod attachments;
 
 // app memory
 pub struct AppState {
@@ -33,7 +34,8 @@ fn main() {
             notes::create_note,
             notes::update_note,
             notes::soft_delete_note,
-            search::search_notes
+            search::search_notes,
+            attachments::attach_file_copy
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
