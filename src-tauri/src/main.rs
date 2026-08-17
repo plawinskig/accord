@@ -12,6 +12,7 @@ mod search;
 // app memory
 pub struct AppState {
     pub db: Mutex<Option<SqlitePool>>,
+    pub workspace_path: Mutex<Option<String>>,
 }
 
 fn main() {
@@ -19,6 +20,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             db: Mutex::new(None),
+            workspace_path: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             workspace::get_workspace,
