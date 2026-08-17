@@ -1,3 +1,12 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+@theme {
+  --color-surface-base: #1e1f22;    /* Darkest (frames, input fields) */
+  --color-surface-sidebar: #2b2d31; /* Dark (left column, right column) */
+  --color-surface-chat: #313338;    /* Main chat background */
+  --color-surface-hover: #35373c;   /* Mouseover */
+  --color-surface-input: #383a40;   /* Message input field */
+  --color-surface-active: #404249;  /* Clicked / Selected folder */
+}
