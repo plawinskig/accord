@@ -31,7 +31,7 @@ fn main() {
         })
         // NASZ NIESTANDARDOWY BEZPIECZNY PROTOKÓŁ!
         .register_uri_scheme_protocol("accord", move |app, request| {
-            let state = app.state::<AppState>();
+            let state = app.app_handle().state::<AppState>();
             let ws_guard = state.workspace_path.lock().unwrap();
             
             if let Some(ws) = ws_guard.as_ref() {
