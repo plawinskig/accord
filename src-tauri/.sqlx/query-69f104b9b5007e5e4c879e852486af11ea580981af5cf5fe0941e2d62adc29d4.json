@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id as \"id!\", note_id as \"note_id!\", original_name as \"original_name!\", operation_type as \"operation_type!: crate::attachments::OperationType\", local_path as \"local_path!\", mime_type as \"mime_type!\" FROM attachments WHERE note_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "note_id!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "original_name!",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "operation_type!: crate::attachments::OperationType",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "local_path!",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "mime_type!",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "69f104b9b5007e5e4c879e852486af11ea580981af5cf5fe0941e2d62adc29d4"
+}
