@@ -80,22 +80,25 @@
 		}
 	}
 
-	// OBSŁUGA SCHOWKA (CTRL+V) - Kompletnie nowa wersja
+	// OBSŁUGA SCHOWKA (CTRL+V) - Wersja Ostateczna (Kuloodporna)
 	function handlePaste(e: ClipboardEvent) {
 		if (!e.clipboardData) return;
 		let handled = false;
 
-		// 1. Sprawdzamy czy to prawdziwy plik obrazka (Narzędzie wycinania, zrzuty ekranu)
-		if (e.clipboardData.files && e.clipboardData.files.length > 0) {
-			for (let i = 0; i < e.clipboardData.files.length; i++) {
-				const file = e.clipboardData.files[i];
-				if (file.type.startsWith('image/')) {
+		// 1. Sprawdzamy czy w schowku jest fizyczny obrazek (Narzędzie wycinania)
+		// Używamy Array.from, bo WebKit na Linuxie czasem źle iteruje po .items
+		const items = Array.from(e.clipboardData.items || []);
+		
+		for (const item of items) {
+			if (item.kind === 'file' && item.type.startsWith('image/')) {
+				const blob = item.getAsFile();
+				if (blob) {
 					pendingFiles = [...pendingFiles, {
 						id: Math.random().toString(),
 						name: `Screenshot_${new Date().getTime()}.png`,
 						type: 'blob',
-						mimeType: file.type,
-						data: file,
+						mimeType: blob.type,
+						data: blob,
 						operation: 'COPY'
 					}];
 					handled = true;
@@ -103,64 +106,47 @@
 			}
 		}
 
-		// 1B. Fallback dla przeglądarek, które podpinają zrzuty pod .items
-		if (!handled && e.clipboardData.items) {
-			for (let i = 0; i < e.clipboardData.items.length; i++) {
-				const item = e.clipboardData.items[i];
-				if (item.kind === 'file' && item.type.startsWith('image/')) {
-					const blob = item.getAsFile();
-					if (blob) {
-						pendingFiles = [...pendingFiles, {
-							id: Math.random().toString(),
-							name: `Screenshot_${new Date().getTime()}.png`,
-							type: 'blob',
-							mimeType: blob.type,
-							data: blob,
-							operation: 'COPY'
-						}];
-						handled = true;
-					}
-				}
-			}
-		}
-
-		// 2. Jeśli to nie obrazek, sprawdzamy czy to ścieżka do pliku (kopiowanie w Linux Nemo)
+		// 2. Jeśli to nie zrzut ekranu, próbujemy przeczytać to jako tekst (Eksplorator plików)
 		if (!handled) {
-			// Linux używa uri-list do trzymania plików w schowku
-			const uriList = e.clipboardData.getData('text/uri-list');
-			const plainText = e.clipboardData.getData('text/plain');
-			const textData = uriList || plainText;
+			const plainText = e.clipboardData.getData('text/plain') || '';
+			const uriList = e.clipboardData.getData('text/uri-list') || '';
+			
+			// Łączymy wszystkie dane, żeby nic nam nie uciekło
+			const combinedText = `${plainText}\n${uriList}`;
+			
+			// Rozbijamy na linijki i czyścimy każdą z osobna
+			const lines = combinedText.split(/[\r\n]+/).map(line => line.trim()).filter(line => line.length > 0);
 
-			if (textData && (textData.includes('file://') || textData.startsWith('/'))) {
-				const lines = textData.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+			for (let line of lines) {
+				// Agresywne czyszczenie z cudzysłowów, które Linux lubi dodawać
+				line = line.replace(/^['"]|['"]$/g, '');
 				
-				for (const line of lines) {
-					if (line.startsWith('file://') || line.startsWith('/')) {
-						// Dekodujemy np. %20 z powrotem na spacje
-						let decodedPath = line.replace(/^file:\/\//i, '');
-						try { decodedPath = decodeURIComponent(decodedPath); } catch(err) {}
-						decodedPath = decodedPath.replace(/\r/g, ''); // Usuwa znak nowej linii
-						
-						const name = decodedPath.split(/[/\\]/).pop() || 'Unknown';
-						
-						pendingFiles = [...pendingFiles, {
-							id: Math.random().toString(),
-							name: name,
-							type: 'path',
-							mimeType: 'application/octet-stream',
-							path: decodedPath,
-							operation: 'COPY'
-						}];
-						handled = true;
-					}
+				// Sprawdzamy, czy przypomina ścieżkę systemową lub URL pliku
+				if (line.startsWith('file://') || line.startsWith('/')) {
+					
+					let decodedPath = line.replace(/^file:\/\//i, '');
+					try { decodedPath = decodeURIComponent(decodedPath); } catch(err) {}
+					
+					const name = decodedPath.split(/[/\\]/).pop() || 'Unknown';
+					
+					pendingFiles = [...pendingFiles, {
+						id: Math.random().toString(),
+						name: name,
+						type: 'path',
+						mimeType: 'application/octet-stream',
+						path: decodedPath,
+						operation: 'COPY'
+					}];
+					handled = true;
 				}
 			}
 		}
 
-		// Jeśli cokolwiek zrobiliśmy (dodaliśmy plik/obraz) to blokujemy domyślne zachowanie!
-		// Dzięki temu ścieżka z pliku nie wklei się ordynarnie do pola tekstowego
+		// 3. BLOKADA: Jeśli złapaliśmy plik lub obrazek, stanowczo zakazujemy
+		// przeglądarce wklejania tych danych jako tekst do <textarea>!
 		if (handled) {
 			e.preventDefault();
+			e.stopPropagation();
 		}
 	}
 
