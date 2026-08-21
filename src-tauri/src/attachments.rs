@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tauri::State;
 use uuid::Uuid;
 use crate::AppState;
 use crate::constants::ATTACHMENTS_DIR;
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, sqlx::Type)]
+#[sqlx(type_name = "TEXT", rename_all = "UPPERCASE")]
 #[serde(rename_all = "UPPERCASE")]
 pub enum OperationType {
     Copy,
@@ -97,4 +98,80 @@ pub async fn attach_file_copy(
             Err(e.to_string())
         }
     }
+}
+
+#[tauri::command]
+pub async fn attach_file_move(
+    note_id: String, source_path: String, original_name: String, mime_type: String, state: State<'_, AppState>,
+) -> Result<Attachment, String> {
+    let db_guard = state.db.lock().await;
+    let pool = db_guard.as_ref().ok_or("Database not connected")?;
+    
+    // Uwaga: w Kroku 3 zmienimy workspace_path na std::sync::Mutex, więc dostęp będzie synchroniczny:
+    let ws_guard = state.workspace_path.lock().unwrap();
+    let workspace = ws_guard.as_ref().ok_or("Workspace path not loaded")?;
+
+    let id = Uuid::new_v4().to_string();
+    let ext = Path::new(&original_name).extension().and_then(|s| s.to_str()).unwrap_or("");
+    let new_file_name = if ext.is_empty() { id.clone() } else { format!("{}.{}", id, ext) };
+    let target_path = Path::new(workspace).join(ATTACHMENTS_DIR).join(&new_file_name);
+
+    // Fallback dla systemów Windows (gdy przenosimy plik między partycjami C: -> D:)
+    if fs::rename(&source_path, &target_path).is_err() {
+        fs::copy(&source_path, &target_path).map_err(|e| format!("Move failed: {}", e))?;
+        let _ = fs::remove_file(&source_path); // Usuwamy oryginał po cichu
+    }
+
+    let op_type = OperationType::Move;
+    sqlx::query!(
+        "INSERT INTO attachments (id, note_id, original_name, operation_type, local_path, mime_type) VALUES (?, ?, ?, ?, ?, ?)",
+        id, note_id, original_name, op_type, new_file_name, mime_type
+    ).execute(pool).await.map_err(|e| e.to_string())?;
+
+    Ok(Attachment { id, note_id, original_name, operation_type: op_type, local_path: new_file_name, mime_type })
+}
+
+#[tauri::command]
+pub async fn attach_file_link(
+    note_id: String, source_path: String, original_name: String, mime_type: String, state: State<'_, AppState>,
+) -> Result<Attachment, String> {
+    let db_guard = state.db.lock().await;
+    let pool = db_guard.as_ref().ok_or("Database not connected")?;
+
+    if !Path::new(&source_path).exists() { return Err("Target file does not exist".into()); }
+
+    let id = Uuid::new_v4().to_string();
+    let op_type = OperationType::Link;
+    
+    sqlx::query!(
+        "INSERT INTO attachments (id, note_id, original_name, operation_type, local_path, mime_type) VALUES (?, ?, ?, ?, ?, ?)",
+        id, note_id, original_name, op_type, source_path, mime_type
+    ).execute(pool).await.map_err(|e| e.to_string())?;
+
+    Ok(Attachment { id, note_id, original_name, operation_type: op_type, local_path: source_path, mime_type })
+}
+
+#[tauri::command]
+pub async fn attach_blob(
+    note_id: String, bytes: Vec<u8>, original_name: String, mime_type: String, state: State<'_, AppState>,
+) -> Result<Attachment, String> {
+    let db_guard = state.db.lock().await;
+    let pool = db_guard.as_ref().ok_or("Database not connected")?;
+    
+    let ws_guard = state.workspace_path.lock().unwrap();
+    let workspace = ws_guard.as_ref().ok_or("Workspace path not loaded")?;
+
+    let id = Uuid::new_v4().to_string();
+    let new_file_name = format!("{}.png", id); // Zakładamy PNG dla blobów ze schowka
+    let target_path = Path::new(workspace).join(ATTACHMENTS_DIR).join(&new_file_name);
+
+    fs::write(&target_path, bytes).map_err(|e| format!("Failed to write blob: {}", e))?;
+
+    let op_type = OperationType::Copy;
+    sqlx::query!(
+        "INSERT INTO attachments (id, note_id, original_name, operation_type, local_path, mime_type) VALUES (?, ?, ?, ?, ?, ?)",
+        id, note_id, original_name, op_type, new_file_name, mime_type
+    ).execute(pool).await.map_err(|e| e.to_string())?;
+
+    Ok(Attachment { id, note_id, original_name, operation_type: op_type, local_path: new_file_name, mime_type })
 }
