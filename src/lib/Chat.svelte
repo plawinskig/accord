@@ -290,7 +290,8 @@
 					{#if note.attachments && note.attachments.length > 0}
 						<div class="mt-2 flex flex-wrap gap-2">
 							{#each note.attachments as att}
-								{#if att.mime_type.startsWith('image/') || att.original_name.endsWith('.png') || att.original_name.endsWith('.jpg')}
+								<!-- NIEZAWODNE SPRAWDZANIE OBRAZKA: -->
+								{#if att.mime_type.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(att.original_name)}
 									<a href={getAttachmentUrl(att)} target="_blank" rel="noopener noreferrer" class="block overflow-hidden rounded-md border border-surface-divider max-w-75">
 										<img src={getAttachmentUrl(att)} alt={att.original_name} class="h-auto w-full object-cover" />
 									</a>
