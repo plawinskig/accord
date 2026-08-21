@@ -10,6 +10,7 @@ pub struct Note {
     pub content: String,
     pub created_at: String,
     pub updated_at: String,
+    pub attachments: Option<Vec<crate::attachments::Attachment>>,
 }
 
 // download all notes from a specific folder
@@ -18,7 +19,7 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
-    let notes = sqlx::query_as!(
+    let mut notes = sqlx::query_as!(
         Note,
         r#"
         SELECT 
@@ -36,6 +37,18 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
     .fetch_all(pool)
     .await
     .map_err(|e| e.to_string())?;
+
+    for note in &mut notes {
+        let atts = sqlx::query_as!(
+            crate::attachments::Attachment,
+            r#"SELECT id as "id!", note_id as "note_id!", original_name as "original_name!", operation_type as "operation_type!: crate::attachments::OperationType", local_path as "local_path!", mime_type as "mime_type!" FROM attachments WHERE note_id = ?"#,
+            note.id
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap_or_default();
+        note.attachments = Some(atts);
+    }
 
     Ok(notes)
 }
