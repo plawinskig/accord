@@ -3,13 +3,14 @@ use tauri::State;
 use uuid::Uuid;
 use crate::AppState;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Note {
     pub id: String,
     pub folder_id: String,
     pub content: String,
     pub created_at: String,
     pub updated_at: String,
+    #[sqlx(default)]
     pub attachments: Option<Vec<crate::attachments::Attachment>>,
 }
 
