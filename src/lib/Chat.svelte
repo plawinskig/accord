@@ -46,7 +46,7 @@
 		node.focus();
 	}
 
-    // automatically respond to `uiState.activeFolderId` change and load new notes
+	// automatically respond to `uiState.activeFolderId` change and load new notes
 	$effect(() => {
 		if (uiState.activeFolderId) {
 			loadNotes(uiState.activeFolderId);
@@ -55,7 +55,7 @@
 		}
 	});
 
-    // automatic scroll to the bottom when the list of notes changes
+	// automatic scroll to the bottom when the list of notes changes
 	$effect(() => {
 		if (notes.length >= 0 && chatContainer) {
 			chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -80,14 +80,16 @@
 		}
 	}
 
-	// OBSŁUGA SCHOWKA (CTRL+V)
+	// OBSŁUGA SCHOWKA (CTRL+V) - Ulepszone!
 	function handlePaste(e: ClipboardEvent) {
 		if (!e.clipboardData) return;
+		
 		const items = e.clipboardData.items;
 		for (let i = 0; i < items.length; i++) {
-			if (items[i].type.indexOf('image') !== -1) {
+			// Wykrywa zarówno obrazki wycięte (Snipping Tool) jak i skopiowane ze stron WWW
+			if (items[i].kind === 'file') {
 				const blob = items[i].getAsFile();
-				if (blob) {
+				if (blob && blob.type.startsWith('image/')) {
 					pendingFiles = [...pendingFiles, {
 						id: Math.random().toString(),
 						name: `Pasted_Image_${new Date().getTime()}.png`,
@@ -123,17 +125,18 @@
 		try {
 			const selectedPath = await open({ multiple: false, title: 'Attach File' });
 			if (selectedPath) {
-				// Pytamy o typ operacji - w przyszłości można to zmienić na ładny Modal
 				const op = prompt("Do you want to COPY, MOVE, or LINK the file?\nType: COPY, MOVE, or LINK", "COPY");
 				if (!op) return;
+				
 				const operation = op.toUpperCase();
+				
 				if (['COPY', 'MOVE', 'LINK'].includes(operation)) {
 					const name = typeof selectedPath === 'string' ? selectedPath.split(/[/\\]/).pop() : 'Unknown';
 					pendingFiles = [...pendingFiles, {
 						id: Math.random().toString(),
 						name: name || 'Unknown',
 						type: 'path',
-						mimeType: 'application/octet-stream', // Do ustalenia ew. w Ruście
+						mimeType: 'application/octet-stream',
 						path: selectedPath as string,
 						operation: operation as 'COPY' | 'MOVE' | 'LINK'
 					}];
@@ -168,12 +171,19 @@
 						const buffer = await file.data.arrayBuffer();
 						await invoke('attach_blob', { 
 							noteId: note.id, 
-							bytes: Array.from(new Uint8Array(buffer)), 
+							// ZMIANA: Przekazujemy Uint8Array w całości zamiast rozbijać go na milion cyfr do Array!
+							bytes: new Uint8Array(buffer), 
 							originalName: file.name, 
 							mimeType: file.mimeType 
 						});
 					} else if (file.type === 'path' && file.path) {
-						const payload = { noteId: note.id, sourcePath: file.path, originalName: file.name, mimeType: file.mimeType };
+						const payload = { 
+							noteId: note.id, 
+							sourcePath: file.path, 
+							originalName: file.name, 
+							mimeType: file.mimeType 
+						};
+						
 						if (file.operation === 'COPY') await invoke('attach_file_copy', payload);
 						else if (file.operation === 'MOVE') await invoke('attach_file_move', payload);
 						else if (file.operation === 'LINK') await invoke('attach_file_link', payload);
@@ -184,6 +194,7 @@
 				newNoteContent = '';
 				pendingFiles = [];
 				await loadNotes(uiState.activeFolderId as string);
+				
 			} catch (e) {
 				console.error('Failed to send note with attachments', e);
 			}
@@ -204,7 +215,9 @@
 			try {
 				await invoke('soft_delete_note', { id });
 				await loadNotes(uiState.activeFolderId as string);
-			} catch (e) { console.error('Failed to delete note', e); }
+			} catch (e) { 
+				console.error('Failed to delete note', e); 
+			}
 		}
 	}
 
