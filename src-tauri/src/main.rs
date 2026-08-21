@@ -34,38 +34,39 @@ fn main() {
             let ws_guard = state.workspace_path.lock().unwrap();
             
             if let Some(ws) = ws_guard.as_ref() {
-                // Odczytujemy bazowy adres
-                let uri = request.uri().path().trim_start_matches('/');
                 
-                let file_path = if uri.starts_with("local/") {
-                    // Bezpiecznie łączymy z folderem workspace/attachments
-                    let file_name = uri.trim_start_matches("local/");
+                // 1. Zamiast dzielić na host i path, bierzemy po prostu cały surowy URL
+                let uri_str = request.uri().to_string();
+                
+                // Wypiszemy to do terminala, żeby w razie problemów widzieć co się dzieje!
+                println!("[Accord Protocol] Otrzymano żądanie: {}", uri_str);
+                
+                // 2. Szukamy naszych słów kluczowych niezależnie od tego, jak Tauri sparsowało link
+                let file_path = if let Some((_, local_part)) = uri_str.split_once("accord://local/") {
                     
-                    // FIX: Dekodujemy nazwę pliku, bo przeglądarka zamienia spacje na %20
-                    let decoded_name = urlencoding::decode(file_name).unwrap_or_default();
+                    let decoded = urlencoding::decode(local_part).unwrap_or_default();
+                    Path::new(ws).join(constants::ATTACHMENTS_DIR).join(decoded.into_owned())
                     
-                    Path::new(ws)
-                        .join(constants::ATTACHMENTS_DIR)
-                        .join(decoded_name.into_owned())
-                        
-                } else if uri.starts_with("link/") {
-                    // Dekodujemy absolutną ścieżkę z systemu
-                    let encoded_path = uri.trim_start_matches("link/");
+                } else if let Some((_, link_part)) = uri_str.split_once("accord://link/") {
                     
-                    // FIX: Dekodujemy ścieżkę absolutną z systemu
-                    let decoded_path = urlencoding::decode(encoded_path).unwrap_or_default();
+                    let decoded = urlencoding::decode(link_part).unwrap_or_default();
+                    PathBuf::from(decoded.into_owned())
                     
-                    PathBuf::from(decoded_path.into_owned())
+                } else if let Some((_, local_part)) = uri_str.split_once("/local/") { 
+                    
+                    // Fallback jeśli Tauri wstrzyknęło np. "localhost" w środek linku
+                    let decoded = urlencoding::decode(local_part).unwrap_or_default();
+                    Path::new(ws).join(constants::ATTACHMENTS_DIR).join(decoded.into_owned())
                     
                 } else {
-                    return Response::builder()
-                        .status(400)
-                        .body(vec![])
-                        .unwrap();
+                    println!("[Accord Protocol] Nierozpoznany format URL!");
+                    return Response::builder().status(400).body(vec![]).unwrap();
                 };
 
+                println!("[Accord Protocol] Szukam pliku na dysku: {:?}", file_path);
+
+                // 3. Odczytujemy plik i nadajemy mu odpowiedni typ (MIME), by przeglądarka umiała go narysować
                 if let Ok(data) = fs::read(&file_path) {
-                    // Wykrywamy typ pliku, by przeglądarka na Linuxie pozwoliła go narysować jako obraz!
                     let extension = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
                     let mime_type = match extension.to_lowercase().as_str() {
                         "png" => "image/png",
@@ -76,19 +77,20 @@ fn main() {
                         _ => "application/octet-stream",
                     };
 
+                    println!("[Accord Protocol] Sukces! Wysyłam jako {}", mime_type);
+
                     return Response::builder()
                         .status(200)
                         .header("Access-Control-Allow-Origin", "*")
                         .header("Content-Type", mime_type)
                         .body(data)
                         .unwrap();
+                } else {
+                    println!("[Accord Protocol] BŁĄD: Nie znaleziono pliku na dysku!");
                 }
             }
             
-            Response::builder()
-                .status(404)
-                .body(vec![])
-                .unwrap()
+            Response::builder().status(404).body(vec![]).unwrap()
         })
         .invoke_handler(tauri::generate_handler![
             workspace::get_workspace,
