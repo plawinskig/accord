@@ -83,67 +83,32 @@
 	// OBSŁUGA SCHOWKA (CTRL+V) - Kompletnie nowa wersja
 	function handlePaste(e: ClipboardEvent) {
 		if (!e.clipboardData) return;
+		let handled = false;
 
-		// ---------------------------------------------------------
-		// SCENARIUSZ A: Wklejono ścieżkę do pliku z eksploratora 
-		// ---------------------------------------------------------
-		const textData = e.clipboardData.getData('text/plain');
-		
-		if (textData && (textData.trim().startsWith('/') || textData.trim().startsWith('file://'))) {
-			e.preventDefault(); // Zatrzymujemy wklejenie tekstu do pola!
-			
-			// Eksplorator może skopiować kilka plików naraz, każdy w nowej linii
-			const lines = textData.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-			
-			for (const line of lines) {
-				// Usuwamy prefiks 'file://' i dekodujemy z ewentualnych %20
-				const decodedPath = decodeURIComponent(line.replace(/^file:\/\//i, ''));
-				
-				// Wyciągamy samą nazwę pliku na koniec
-				const name = decodedPath.split(/[/\\]/).pop() || 'Unknown';
-				
-				// Dodajemy plik do kolejki (domyślnie jako COPY)
-				pendingFiles = [...pendingFiles, {
-					id: Math.random().toString(),
-					name: name,
-					type: 'path',
-					mimeType: 'application/octet-stream',
-					path: decodedPath,
-					operation: 'COPY'
-				}];
-			}
-			return; // Kończymy, obsłużyliśmy tekst!
-		}
-
-		// ---------------------------------------------------------
-		// SCENARIUSZ B: Wklejono prawdziwy obrazek (Narzędzie wycinania)
-		// ---------------------------------------------------------
-		let imageHandled = false;
-		const files = e.clipboardData.files; 
-		
-		// Sprawdzamy obiekt files (często lepsze wsparcie dla obrazków na Linuxie)
-		if (files && files.length > 0) {
-			for (let i = 0; i < files.length; i++) {
-				const file = files[i];
+		// 1. Sprawdzamy czy to prawdziwy plik obrazka (Narzędzie wycinania, zrzuty ekranu)
+		if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+			for (let i = 0; i < e.clipboardData.files.length; i++) {
+				const file = e.clipboardData.files[i];
 				if (file.type.startsWith('image/')) {
 					pendingFiles = [...pendingFiles, {
 						id: Math.random().toString(),
 						name: `Screenshot_${new Date().getTime()}.png`,
 						type: 'blob',
 						mimeType: file.type,
-						data: file, // podpinamy cały obrazek
+						data: file,
 						operation: 'COPY'
 					}];
-					imageHandled = true;
+					handled = true;
 				}
 			}
-		} 
-		// Fallback dla innych przeglądarek (Chrome API)
-		else if (e.clipboardData.items) {
-			const items = e.clipboardData.items;
-			for (let i = 0; i < items.length; i++) {
-				if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
-					const blob = items[i].getAsFile();
+		}
+
+		// 1B. Fallback dla przeglądarek, które podpinają zrzuty pod .items
+		if (!handled && e.clipboardData.items) {
+			for (let i = 0; i < e.clipboardData.items.length; i++) {
+				const item = e.clipboardData.items[i];
+				if (item.kind === 'file' && item.type.startsWith('image/')) {
+					const blob = item.getAsFile();
 					if (blob) {
 						pendingFiles = [...pendingFiles, {
 							id: Math.random().toString(),
@@ -153,15 +118,48 @@
 							data: blob,
 							operation: 'COPY'
 						}];
-						imageHandled = true;
+						handled = true;
 					}
 				}
 			}
 		}
 
-		// FIX: Jeśli złapaliśmy obrazek, musimy ZABLOKOWAĆ pole tekstowe, 
-		// w przeciwnym razie po cichu usunie nasz event!
-		if (imageHandled) {
+		// 2. Jeśli to nie obrazek, sprawdzamy czy to ścieżka do pliku (kopiowanie w Linux Nemo)
+		if (!handled) {
+			// Linux używa uri-list do trzymania plików w schowku
+			const uriList = e.clipboardData.getData('text/uri-list');
+			const plainText = e.clipboardData.getData('text/plain');
+			const textData = uriList || plainText;
+
+			if (textData && (textData.includes('file://') || textData.startsWith('/'))) {
+				const lines = textData.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+				
+				for (const line of lines) {
+					if (line.startsWith('file://') || line.startsWith('/')) {
+						// Dekodujemy np. %20 z powrotem na spacje
+						let decodedPath = line.replace(/^file:\/\//i, '');
+						try { decodedPath = decodeURIComponent(decodedPath); } catch(err) {}
+						decodedPath = decodedPath.replace(/\r/g, ''); // Usuwa znak nowej linii
+						
+						const name = decodedPath.split(/[/\\]/).pop() || 'Unknown';
+						
+						pendingFiles = [...pendingFiles, {
+							id: Math.random().toString(),
+							name: name,
+							type: 'path',
+							mimeType: 'application/octet-stream',
+							path: decodedPath,
+							operation: 'COPY'
+						}];
+						handled = true;
+					}
+				}
+			}
+		}
+
+		// Jeśli cokolwiek zrobiliśmy (dodaliśmy plik/obraz) to blokujemy domyślne zachowanie!
+		// Dzięki temu ścieżka z pliku nie wklei się ordynarnie do pola tekstowego
+		if (handled) {
 			e.preventDefault();
 		}
 	}
@@ -266,11 +264,11 @@
 
 	// Funkcja pomocnicza generująca URL naszego protokołu accord://
 	function getAttachmentUrl(att: Attachment) {
-		// FIX: Używamy encodeURIComponent, żeby bezpiecznie przesłać spacje i znaki specjalne do Rusta!
+		// Używamy encodeURIComponent, by bezpiecznie przekazać np. spacje z nazwy pliku
 		if (att.operation_type === 'LINK') {
 			return `accord://link/${encodeURIComponent(att.local_path)}`;
 		}
-		
+
 		return `accord://local/${encodeURIComponent(att.local_path)}`;
 	}
 
