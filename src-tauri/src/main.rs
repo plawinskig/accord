@@ -19,7 +19,7 @@ mod attachments;
 // app memory
 pub struct AppState {
     pub db: TokioMutex<Option<SqlitePool>>,
-    pub workspace_path: StdMutex<Option<String>>, // Zmienione na standardowy Mutex!
+    pub workspace_path: StdMutex<Option<String>>,
 }
 
 fn main() {
@@ -29,7 +29,6 @@ fn main() {
             db: TokioMutex::new(None),
             workspace_path: StdMutex::new(None),
         })
-        // NASZ NIESTANDARDOWY BEZPIECZNY PROTOKÓŁ!
         .register_uri_scheme_protocol("accord", move |app, request| {
             let state = app.app_handle().state::<AppState>();
             let ws_guard = state.workspace_path.lock().unwrap();
@@ -41,25 +40,50 @@ fn main() {
                 let file_path = if uri.starts_with("local/") {
                     // Bezpiecznie łączymy z folderem workspace/attachments
                     let file_name = uri.trim_start_matches("local/");
-                    Path::new(ws).join(constants::ATTACHMENTS_DIR).join(file_name)
+                    
+                    Path::new(ws)
+                        .join(constants::ATTACHMENTS_DIR)
+                        .join(file_name)
+                        
                 } else if uri.starts_with("link/") {
                     // Dekodujemy absolutną ścieżkę z systemu
                     let encoded_path = uri.trim_start_matches("link/");
                     let decoded = urlencoding::decode(encoded_path).unwrap_or_default();
+                    
                     PathBuf::from(decoded.into_owned())
+                    
                 } else {
-                    return Response::builder().status(400).body(vec![]).unwrap();
+                    return Response::builder()
+                        .status(400)
+                        .body(vec![])
+                        .unwrap();
                 };
 
                 if let Ok(data) = fs::read(&file_path) {
+                    // Wykrywamy typ pliku, by przeglądarka na Linuxie pozwoliła go narysować jako obraz!
+                    let extension = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                    let mime_type = match extension.to_lowercase().as_str() {
+                        "png" => "image/png",
+                        "jpg" | "jpeg" => "image/jpeg",
+                        "gif" => "image/gif",
+                        "webp" => "image/webp",
+                        "pdf" => "application/pdf",
+                        _ => "application/octet-stream",
+                    };
+
                     return Response::builder()
                         .status(200)
                         .header("Access-Control-Allow-Origin", "*")
+                        .header("Content-Type", mime_type)
                         .body(data)
                         .unwrap();
                 }
             }
-            Response::builder().status(404).body(vec![]).unwrap()
+            
+            Response::builder()
+                .status(404)
+                .body(vec![])
+                .unwrap()
         })
         .invoke_handler(tauri::generate_handler![
             workspace::get_workspace,
