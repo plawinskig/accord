@@ -13,8 +13,13 @@ pub struct Note {
     pub attachments: Option<Vec<crate::attachments::Attachment>>,
 }
 
+// download all notes from a specific folder
 #[tauri::command]
-pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<Vec<Note>, String> {
+pub async fn get_notes(
+    folder_id: String, 
+    state: State<'_, AppState>
+) -> Result<Vec<Note>, String> {
+    
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
@@ -43,7 +48,17 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
     for record in notes_records {
         let atts = sqlx::query_as!(
             crate::attachments::Attachment,
-            r#"SELECT id as "id!", note_id as "note_id!", original_name as "original_name!", operation_type as "operation_type!: crate::attachments::OperationType", local_path as "local_path!", mime_type as "mime_type!" FROM attachments WHERE note_id = ?"#,
+            r#"
+            SELECT 
+                id as "id!", 
+                note_id as "note_id!", 
+                original_name as "original_name!", 
+                operation_type as "operation_type!: crate::attachments::OperationType", 
+                local_path as "local_path!", 
+                mime_type as "mime_type!" 
+            FROM attachments 
+            WHERE note_id = ?
+            "#,
             record.id
         )
         .fetch_all(pool)
@@ -65,7 +80,12 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
 
 // Add new note
 #[tauri::command]
-pub async fn create_note(folder_id: String, content: String, state: State<'_, AppState>) -> Result<Note, String> {
+pub async fn create_note(
+    folder_id: String, 
+    content: String, 
+    state: State<'_, AppState>
+) -> Result<Note, String> {
+    
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
@@ -108,22 +128,43 @@ pub async fn create_note(folder_id: String, content: String, state: State<'_, Ap
 
 // Edit the note
 #[tauri::command]
-pub async fn update_note(id: String, content: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn update_note(
+    id: String, 
+    content: String, 
+    state: State<'_, AppState>
+) -> Result<(), String> {
+    
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
-    sqlx::query!("UPDATE notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", content, id)
-        .execute(pool).await.map_err(|e| e.to_string())?;
+    sqlx::query!(
+        "UPDATE notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", 
+        content, id
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    
     Ok(())
 }
 
 // Soft delete to trash
 #[tauri::command]
-pub async fn soft_delete_note(id: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn soft_delete_note(
+    id: String, 
+    state: State<'_, AppState>
+) -> Result<(), String> {
+    
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
-    sqlx::query!("UPDATE notes SET is_deleted = 1 WHERE id = ?", id)
-        .execute(pool).await.map_err(|e| e.to_string())?;
+    sqlx::query!(
+        "UPDATE notes SET is_deleted = 1 WHERE id = ?", 
+        id
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    
     Ok(())
 }
