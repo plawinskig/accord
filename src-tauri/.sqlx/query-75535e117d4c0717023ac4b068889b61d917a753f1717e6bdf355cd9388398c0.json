@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id as \"id!\", note_id as \"note_id!\", original_name as \"original_name!\", operation_type as \"operation_type!: crate::attachments::OperationType\", local_path as \"local_path!\", mime_type as \"mime_type!\" FROM attachments WHERE note_id = ?",
+  "query": "\n            SELECT \n                id as \"id!\", \n                note_id as \"note_id!\", \n                original_name as \"original_name!\", \n                operation_type as \"operation_type!: crate::attachments::OperationType\", \n                local_path as \"local_path!\", \n                mime_type as \"mime_type!\" \n            FROM attachments \n            WHERE note_id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "69f104b9b5007e5e4c879e852486af11ea580981af5cf5fe0941e2d62adc29d4"
+  "hash": "75535e117d4c0717023ac4b068889b61d917a753f1717e6bdf355cd9388398c0"
 }
