@@ -95,7 +95,7 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div 
 		onclick={() => { uiState.activeFolderId = node.id; uiState.activeFolderName = node.name; }}
-		class="group flex cursor-pointer items-center justify-between rounded py-1.5 pr-2 transition-colors {uiState.activeFolderId === node.id ? 'bg-[#404249] text-white' : 'text-gray-400 hover:bg-[#35373c] hover:text-gray-200'}"
+		class="group flex cursor-pointer items-center justify-between rounded py-1.5 pr-2 transition-colors {uiState.activeFolderId === node.id ? 'bg-surface-active text-white' : 'text-gray-400 hover:bg-surface-hover hover:text-gray-200'}"
 		style="padding-left: calc(0.5rem + {depth} * 1rem);"
 	>
 		<div class="flex flex-1 items-center truncate">
@@ -132,8 +132,8 @@
 	{/if}
 {/snippet}
 
-<div class="flex h-full w-60 flex-col bg-[#2b2d31]">
-	<div class="flex h-12 cursor-pointer items-center border-b border-[#1e1f22] px-4 font-bold text-white shadow-sm transition-colors hover:bg-[#35373c]">
+<div class="flex h-full w-60 flex-col bg-surface-sidebar">
+	<div class="flex h-12 cursor-pointer items-center border-b border-surface-base px-4 font-bold text-white shadow-sm transition-colors hover:bg-surface-hover">
 		Accord Base
 	</div>
 
@@ -144,13 +144,13 @@
 		{/each}
 	</div>
 
-	<div class="bg-[#232428] p-4">
+	<div class="bg-surface-input-bg p-4">
 		<input
 			type="text"
 			bind:value={newFolderName}
 			onkeydown={addRootFolder}
 			placeholder="Create root channel..."
-			class="w-full rounded bg-[#1e1f22] px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+			class="w-full rounded bg-surface-base px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
 		/>
 	</div>
 </div>

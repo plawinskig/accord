@@ -54,7 +54,7 @@
 			onfocus={() => (isFocused = true)}
 			onblur={() => setTimeout(() => (isFocused = false), 150)}
 			placeholder="Search notes..."
-			class="w-full rounded bg-[#1e1f22] px-3 py-1.5 pl-8 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+			class="w-full rounded bg-surface-base px-3 py-1.5 pl-8 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
 		/>
 		<svg class="absolute left-2.5 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -63,7 +63,7 @@
 
 	<!-- pop-up window (dropdown) with results -->
 	{#if isFocused && query.length >= 2}
-		<div class="absolute right-0 top-10 z-50 w-100 overflow-hidden rounded-md border border-[#1e1f22] bg-[#2b2d31] shadow-xl">
+		<div class="absolute right-0 top-10 z-50 w-100 overflow-hidden rounded-md border border-surface-base bg-surface-sidebar shadow-xl">
 			{#if results.length === 0}
 				<div class="p-4 text-center text-sm text-gray-500">No results found.</div>
 			{:else}
@@ -72,7 +72,7 @@
 						<!-- use `onmousedown` instead of `onclick` so that it triggers BEFORE the input loses focus (`onblur`) -->
 						<button 
 							onmousedown={(e) => { e.preventDefault(); selectResult(result); }}
-							class="w-full border-b border-[#1e1f22] px-4 py-3 text-left transition-colors hover:bg-[#35373c] last:border-0"
+							class="w-full border-b border-surface-base px-4 py-3 text-left transition-colors hover:bg-surface-hover last:border-0"
 						>
 							<div class="mb-1 flex items-center justify-between">
 								<span class="text-xs font-bold text-gray-400">#{result.folder_name}</span>

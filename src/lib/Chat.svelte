@@ -115,10 +115,10 @@
 	}
 </script>
 
-<div class="flex h-full flex-col bg-[#313338]">
+<div class="flex h-full flex-col bg-surface-chat">
 	{#if uiState.activeFolderId}
 		<!-- chat header -->
-		<div class="flex h-12 items-center border-b border-[#2b2d31] px-4 font-bold shadow-sm">
+		<div class="flex h-12 items-center border-b border-surface-sidebar px-4 font-bold shadow-sm">
 			<span class="mr-2 text-xl text-gray-500">#</span>
 			<span class="text-white">{uiState.activeFolderName}</span>
 		</div>
@@ -127,7 +127,7 @@
 		<div bind:this={chatContainer} class="flex-1 space-y-4 overflow-y-auto p-4">
 			{#if notes.length === 0}
 				<div class="flex h-full flex-col items-center justify-center text-center">
-					<div class="mb-4 rounded-full bg-[#2b2d31] p-6 text-gray-500">
+					<div class="mb-4 rounded-full bg-surface-sidebar p-6 text-gray-500">
 						<svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
 					</div>
 					<h2 class="text-2xl font-bold text-gray-300">Welcome to #{uiState.activeFolderName}!</h2>
@@ -139,7 +139,7 @@
 			{#each notes as note}
 				<div 
                     id="note-{note.id}" 
-                    class="group relative flex flex-col rounded-md px-2 py-1 transition-all duration-1000 {uiState.highlightNoteId === note.id ? 'bg-indigo-500/20 ring-1 ring-indigo-500' : 'hover:bg-[#2b2d31]'}"
+                    class="group relative flex flex-col rounded-md px-2 py-1 transition-all duration-1000 {uiState.highlightNoteId === note.id ? 'bg-indigo-500/20 ring-1 ring-indigo-500' : 'hover:bg-surface-sidebar'}"
                 >
 					
 					<!-- top note bar (date and edit icons hidden under hover) -->
@@ -152,7 +152,7 @@
 						</span>
 						
                         <!-- edit/delete controls -->
-						<div class="absolute -top-3 right-4 hidden space-x-2 rounded-md border border-[#1e1f22] bg-[#313338] px-2 py-1 shadow-sm group-hover:flex">
+						<div class="absolute -top-3 right-4 hidden space-x-2 rounded-md border border-surface-base bg-surface-chat px-2 py-1 shadow-sm group-hover:flex">
 							<button onclick={() => startEdit(note)} class="text-gray-400 hover:text-indigo-400" title="Edit">
 								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
 							</button>
@@ -168,7 +168,7 @@
 							bind:value={editContent}
 							onkeydown={saveEdit}
 							use:focusOnMount
-							class="min-h-15 w-full resize-none rounded bg-[#383a40] p-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+							class="min-h-15 w-full resize-none rounded bg-surface-input p-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
 							placeholder="Press Enter to save, Escape to cancel"
 						></textarea>
 						<span class="mt-1 text-xs text-gray-500">Escape to cancel • Enter to save</span>
@@ -181,7 +181,7 @@
 
 		<!-- field for entering a new note at the bottom -->
 		<div class="p-4 pt-0">
-			<div class="relative flex items-center rounded-lg bg-[#383a40]">
+			<div class="relative flex items-center rounded-lg bg-surface-input">
 				<textarea
 					bind:value={newNoteContent}
 					onkeydown={sendNote}
