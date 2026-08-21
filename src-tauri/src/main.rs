@@ -34,23 +34,28 @@ fn main() {
             let ws_guard = state.workspace_path.lock().unwrap();
             
             if let Some(ws) = ws_guard.as_ref() {
-                // Odczytujemy URL, np. accord://local/123.png -> local/123.png
+                // Odczytujemy bazowy adres
                 let uri = request.uri().path().trim_start_matches('/');
                 
                 let file_path = if uri.starts_with("local/") {
                     // Bezpiecznie łączymy z folderem workspace/attachments
                     let file_name = uri.trim_start_matches("local/");
                     
+                    // FIX: Dekodujemy nazwę pliku, bo przeglądarka zamienia spacje na %20
+                    let decoded_name = urlencoding::decode(file_name).unwrap_or_default();
+                    
                     Path::new(ws)
                         .join(constants::ATTACHMENTS_DIR)
-                        .join(file_name)
+                        .join(decoded_name.into_owned())
                         
                 } else if uri.starts_with("link/") {
                     // Dekodujemy absolutną ścieżkę z systemu
                     let encoded_path = uri.trim_start_matches("link/");
-                    let decoded = urlencoding::decode(encoded_path).unwrap_or_default();
                     
-                    PathBuf::from(decoded.into_owned())
+                    // FIX: Dekodujemy ścieżkę absolutną z systemu
+                    let decoded_path = urlencoding::decode(encoded_path).unwrap_or_default();
+                    
+                    PathBuf::from(decoded_path.into_owned())
                     
                 } else {
                     return Response::builder()
