@@ -1,9 +1,12 @@
-use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, SqlitePool};
+use crate::constants::DB_FILE_NAME;
+use crate::AppState;
+use sqlx::{
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+    SqlitePool,
+};
 use std::path::Path;
 use std::str::FromStr;
 use tauri::State;
-use crate::AppState;
-use crate::constants::DB_FILE_NAME;
 
 // internal function connecting to the database in workspace
 pub async fn init_db(workspace_path: &str) -> Result<SqlitePool, String> {
@@ -32,9 +35,12 @@ pub async fn init_db(workspace_path: &str) -> Result<SqlitePool, String> {
 
 // command called right after the path is loaded
 #[tauri::command]
-pub async fn connect_to_db(workspace_path: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn connect_to_db(
+    workspace_path: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let pool = init_db(&workspace_path).await?;
-    
+
     // save the connection pool in the application's memory (state) so that other functions can access it
     *state.db.lock().await = Some(pool);
     // save the path so the attachments module can access it

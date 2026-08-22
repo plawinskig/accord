@@ -1,6 +1,6 @@
+use crate::AppState;
 use serde::{Deserialize, Serialize};
 use tauri::State;
-use crate::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchResult {
@@ -12,7 +12,10 @@ pub struct SearchResult {
 }
 
 #[tauri::command]
-pub async fn search_notes(query: String, state: State<'_, AppState>) -> Result<Vec<SearchResult>, String> {
+pub async fn search_notes(
+    query: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<SearchResult>, String> {
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 

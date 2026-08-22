@@ -1,7 +1,7 @@
+use crate::AppState;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
-use crate::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Note {
@@ -15,11 +15,7 @@ pub struct Note {
 
 // download all notes from a specific folder
 #[tauri::command]
-pub async fn get_notes(
-    folder_id: String, 
-    state: State<'_, AppState>
-) -> Result<Vec<Note>, String> {
-    
+pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<Vec<Note>, String> {
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
@@ -43,7 +39,7 @@ pub async fn get_notes(
     .map_err(|e| e.to_string())?;
 
     let mut notes = Vec::new();
-    
+
     // Ręcznie budujemy struktury Note dociągając do nich załączniki
     for record in notes_records {
         let atts = sqlx::query_as!(
@@ -64,7 +60,7 @@ pub async fn get_notes(
         .fetch_all(pool)
         .await
         .unwrap_or_default();
-        
+
         notes.push(Note {
             id: record.id,
             folder_id: record.folder_id,
@@ -81,11 +77,10 @@ pub async fn get_notes(
 // Add new note
 #[tauri::command]
 pub async fn create_note(
-    folder_id: String, 
-    content: String, 
-    state: State<'_, AppState>
+    folder_id: String,
+    content: String,
+    state: State<'_, AppState>,
 ) -> Result<Note, String> {
-    
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
@@ -93,7 +88,9 @@ pub async fn create_note(
 
     sqlx::query!(
         "INSERT INTO notes (id, folder_id, content, is_deleted) VALUES (?, ?, ?, 0)",
-        id, folder_id, content
+        id,
+        folder_id,
+        content
     )
     .execute(pool)
     .await
@@ -129,42 +126,35 @@ pub async fn create_note(
 // Edit the note
 #[tauri::command]
 pub async fn update_note(
-    id: String, 
-    content: String, 
-    state: State<'_, AppState>
+    id: String,
+    content: String,
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
-    
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
     sqlx::query!(
-        "UPDATE notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", 
-        content, id
-    )
-    .execute(pool)
-    .await
-    .map_err(|e| e.to_string())?;
-    
-    Ok(())
-}
-
-// Soft delete to trash
-#[tauri::command]
-pub async fn soft_delete_note(
-    id: String, 
-    state: State<'_, AppState>
-) -> Result<(), String> {
-    
-    let db_guard = state.db.lock().await;
-    let pool = db_guard.as_ref().ok_or("Database not connected")?;
-
-    sqlx::query!(
-        "UPDATE notes SET is_deleted = 1 WHERE id = ?", 
+        "UPDATE notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        content,
         id
     )
     .execute(pool)
     .await
     .map_err(|e| e.to_string())?;
-    
+
+    Ok(())
+}
+
+// Soft delete to trash
+#[tauri::command]
+pub async fn soft_delete_note(id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let db_guard = state.db.lock().await;
+    let pool = db_guard.as_ref().ok_or("Database not connected")?;
+
+    sqlx::query!("UPDATE notes SET is_deleted = 1 WHERE id = ?", id)
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
     Ok(())
 }

@@ -1,9 +1,9 @@
+use crate::AppState;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
-use crate::AppState;
 
-// folder structure (database folders) 
+// folder structure (database folders)
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Folder {
     pub id: String,
@@ -39,7 +39,11 @@ pub async fn get_folders(state: State<'_, AppState>) -> Result<Vec<Folder>, Stri
 
 // create a new folder with a secure UUID
 #[tauri::command]
-pub async fn create_folder(name: String, parent_id: Option<String>, state: State<'_, AppState>) -> Result<Folder, String> {
+pub async fn create_folder(
+    name: String,
+    parent_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<Folder, String> {
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
@@ -47,14 +51,20 @@ pub async fn create_folder(name: String, parent_id: Option<String>, state: State
 
     sqlx::query!(
         "INSERT INTO folders (id, parent_id, name, is_deleted) VALUES (?, ?, ?, 0)",
-        id, parent_id, name
+        id,
+        parent_id,
+        name
     )
     .execute(pool)
     .await
     .map_err(|e| e.to_string())?;
 
     // return the created folder to the interface so that it is displayed immediately
-    Ok(Folder { id, parent_id, name })
+    Ok(Folder {
+        id,
+        parent_id,
+        name,
+    })
 }
 
 #[tauri::command]

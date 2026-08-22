@@ -1,10 +1,10 @@
+use crate::constants::ATTACHMENTS_DIR;
+use crate::AppState;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use tauri::State;
 use uuid::Uuid;
-use crate::AppState;
-use crate::constants::ATTACHMENTS_DIR;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, sqlx::Type)]
 #[sqlx(type_name = "TEXT", rename_all = "UPPERCASE")]
@@ -37,43 +37,44 @@ pub struct Attachment {
 
 #[tauri::command]
 pub async fn attach_file_copy(
-    note_id: String, 
-    source_path: String, 
-    original_name: String, 
-    mime_type: String, 
+    note_id: String,
+    source_path: String,
+    original_name: String,
+    mime_type: String,
     state: State<'_, AppState>,
 ) -> Result<Attachment, String> {
-    
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
-    
+
     let workspace = {
         let ws_guard = state.workspace_path.lock().unwrap();
-        ws_guard.as_ref().ok_or("Workspace path not loaded")?.clone()
+        ws_guard
+            .as_ref()
+            .ok_or("Workspace path not loaded")?
+            .clone()
     };
 
     let id = Uuid::new_v4().to_string();
-    
+
     // get file extension from the original filename
     let ext = Path::new(&original_name)
         .extension()
         .and_then(|os_str| os_str.to_str())
         .unwrap_or("");
-        
+
     // generate a secure file name UUID.extension
-    let new_file_name = if ext.is_empty() { 
-        id.clone() 
-    } else { 
-        format!("{}.{}", id, ext) 
+    let new_file_name = if ext.is_empty() {
+        id.clone()
+    } else {
+        format!("{}.{}", id, ext)
     };
-    
+
     let target_path = Path::new(&workspace)
         .join(ATTACHMENTS_DIR)
         .join(&new_file_name);
 
     // copy the file to the hidden folder
-    fs::copy(&source_path, &target_path)
-        .map_err(|e| format!("Failed to copy file: {}", e))?;
+    fs::copy(&source_path, &target_path).map_err(|e| format!("Failed to copy file: {}", e))?;
 
     let op_type = OperationType::Copy;
     let op_type_str = op_type.as_str();
@@ -88,18 +89,16 @@ pub async fn attach_file_copy(
 
     // check to see if the database has accepted the data
     match result {
-        Ok(_) => {
-            Ok(Attachment { 
-                id, 
-                note_id, 
-                original_name, 
-                operation_type: op_type, 
-                local_path: new_file_name, 
-                mime_type 
-            })
-        },
+        Ok(_) => Ok(Attachment {
+            id,
+            note_id,
+            original_name,
+            operation_type: op_type,
+            local_path: new_file_name,
+            mime_type,
+        }),
         Err(e) => {
-            let _ = fs::remove_file(target_path); 
+            let _ = fs::remove_file(target_path);
             Err(e.to_string())
         }
     }
@@ -107,49 +106,50 @@ pub async fn attach_file_copy(
 
 #[tauri::command]
 pub async fn attach_file_move(
-    note_id: String, 
-    source_path: String, 
-    original_name: String, 
-    mime_type: String, 
+    note_id: String,
+    source_path: String,
+    original_name: String,
+    mime_type: String,
     state: State<'_, AppState>,
 ) -> Result<Attachment, String> {
-    
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
-    
+
     let workspace = {
         let ws_guard = state.workspace_path.lock().unwrap();
-        ws_guard.as_ref().ok_or("Workspace path not loaded")?.clone()
+        ws_guard
+            .as_ref()
+            .ok_or("Workspace path not loaded")?
+            .clone()
     };
 
     let id = Uuid::new_v4().to_string();
-    
+
     let ext = Path::new(&original_name)
         .extension()
         .and_then(|s| s.to_str())
         .unwrap_or("");
-        
-    let new_file_name = if ext.is_empty() { 
-        id.clone() 
-    } else { 
-        format!("{}.{}", id, ext) 
+
+    let new_file_name = if ext.is_empty() {
+        id.clone()
+    } else {
+        format!("{}.{}", id, ext)
     };
-    
+
     let target_path = Path::new(&workspace)
         .join(ATTACHMENTS_DIR)
         .join(&new_file_name);
 
     // Fallback dla systemów Windows (gdy przenosimy plik między partycjami C: -> D:)
     if fs::rename(&source_path, &target_path).is_err() {
-        fs::copy(&source_path, &target_path)
-            .map_err(|e| format!("Move failed: {}", e))?;
-            
-        let _ = fs::remove_file(&source_path); 
+        fs::copy(&source_path, &target_path).map_err(|e| format!("Move failed: {}", e))?;
+
+        let _ = fs::remove_file(&source_path);
     }
 
     let op_type = OperationType::Move;
     let op_type_str = op_type.as_str();
-    
+
     sqlx::query!(
         "INSERT INTO attachments (id, note_id, original_name, operation_type, local_path, mime_type) VALUES (?, ?, ?, ?, ?, ?)",
         id, note_id, original_name, op_type_str, new_file_name, mime_type
@@ -158,25 +158,24 @@ pub async fn attach_file_move(
     .await
     .map_err(|e| e.to_string())?;
 
-    Ok(Attachment { 
-        id, 
-        note_id, 
-        original_name, 
-        operation_type: op_type, 
-        local_path: new_file_name, 
-        mime_type 
+    Ok(Attachment {
+        id,
+        note_id,
+        original_name,
+        operation_type: op_type,
+        local_path: new_file_name,
+        mime_type,
     })
 }
 
 #[tauri::command]
 pub async fn attach_file_link(
-    note_id: String, 
-    source_path: String, 
-    original_name: String, 
-    mime_type: String, 
+    note_id: String,
+    source_path: String,
+    original_name: String,
+    mime_type: String,
     state: State<'_, AppState>,
 ) -> Result<Attachment, String> {
-    
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
@@ -192,46 +191,47 @@ pub async fn attach_file_link(
     .await
     .map_err(|e| e.to_string())?;
 
-    Ok(Attachment { 
-        id, 
-        note_id, 
-        original_name, 
-        operation_type: op_type, 
-        local_path: source_path, 
-        mime_type 
+    Ok(Attachment {
+        id,
+        note_id,
+        original_name,
+        operation_type: op_type,
+        local_path: source_path,
+        mime_type,
     })
 }
 
 #[tauri::command]
 pub async fn attach_blob(
-    note_id: String, 
-    bytes: Vec<u8>, 
-    original_name: String, 
-    mime_type: String, 
+    note_id: String,
+    bytes: Vec<u8>,
+    original_name: String,
+    mime_type: String,
     state: State<'_, AppState>,
 ) -> Result<Attachment, String> {
-    
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
-    
+
     let workspace = {
         let ws_guard = state.workspace_path.lock().unwrap();
-        ws_guard.as_ref().ok_or("Workspace path not loaded")?.clone()
+        ws_guard
+            .as_ref()
+            .ok_or("Workspace path not loaded")?
+            .clone()
     };
 
     let id = Uuid::new_v4().to_string();
-    let new_file_name = format!("{}.png", id); 
-    
+    let new_file_name = format!("{}.png", id);
+
     let target_path = Path::new(&workspace)
         .join(ATTACHMENTS_DIR)
         .join(&new_file_name);
 
-    fs::write(&target_path, bytes)
-        .map_err(|e| format!("Failed to write blob: {}", e))?;
+    fs::write(&target_path, bytes).map_err(|e| format!("Failed to write blob: {}", e))?;
 
     let op_type = OperationType::Copy;
     let op_type_str = op_type.as_str();
-    
+
     sqlx::query!(
         "INSERT INTO attachments (id, note_id, original_name, operation_type, local_path, mime_type) VALUES (?, ?, ?, ?, ?, ?)",
         id, note_id, original_name, op_type_str, new_file_name, mime_type
@@ -240,12 +240,12 @@ pub async fn attach_blob(
     .await
     .map_err(|e| e.to_string())?;
 
-    Ok(Attachment { 
-        id, 
-        note_id, 
-        original_name, 
-        operation_type: op_type, 
-        local_path: new_file_name, 
-        mime_type 
+    Ok(Attachment {
+        id,
+        note_id,
+        original_name,
+        operation_type: op_type,
+        local_path: new_file_name,
+        mime_type,
     })
 }

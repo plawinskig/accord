@@ -3,19 +3,19 @@
 use sqlx::SqlitePool;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex as StdMutex;
 use tauri::http::Response;
 use tauri::Manager;
 use tokio::sync::Mutex as TokioMutex;
-use std::sync::Mutex as StdMutex;
 
+mod attachments;
+mod clipboard;
 mod constants;
 mod db;
 mod folders;
 mod notes;
 mod search;
 mod workspace;
-mod attachments;
-mod clipboard;
 
 // app memory
 pub struct AppState {
@@ -33,32 +33,30 @@ fn main() {
         .register_uri_scheme_protocol("accord", move |app, request| {
             let state = app.app_handle().state::<AppState>();
             let ws_guard = state.workspace_path.lock().unwrap();
-            
+
             if let Some(ws) = ws_guard.as_ref() {
-                
                 // 1. Zamiast dzielić na host i path, bierzemy po prostu cały surowy URL
                 let uri_str = request.uri().to_string();
-                
+
                 // Wypiszemy to do terminala, żeby w razie problemów widzieć co się dzieje!
                 println!("[Accord Protocol] Otrzymano żądanie: {}", uri_str);
-                
+
                 // 2. Szukamy naszych słów kluczowych niezależnie od tego, jak Tauri sparsowało link
-                let file_path = if let Some((_, local_part)) = uri_str.split_once("accord://local/") {
-                    
+                let file_path = if let Some((_, local_part)) = uri_str.split_once("accord://local/")
+                {
                     let decoded = urlencoding::decode(local_part).unwrap_or_default();
-                    Path::new(ws).join(constants::ATTACHMENTS_DIR).join(decoded.into_owned())
-                    
+                    Path::new(ws)
+                        .join(constants::ATTACHMENTS_DIR)
+                        .join(decoded.into_owned())
                 } else if let Some((_, link_part)) = uri_str.split_once("accord://link/") {
-                    
                     let decoded = urlencoding::decode(link_part).unwrap_or_default();
                     PathBuf::from(decoded.into_owned())
-                    
-                } else if let Some((_, local_part)) = uri_str.split_once("/local/") { 
-                    
+                } else if let Some((_, local_part)) = uri_str.split_once("/local/") {
                     // Fallback jeśli Tauri wstrzyknęło np. "localhost" w środek linku
                     let decoded = urlencoding::decode(local_part).unwrap_or_default();
-                    Path::new(ws).join(constants::ATTACHMENTS_DIR).join(decoded.into_owned())
-                    
+                    Path::new(ws)
+                        .join(constants::ATTACHMENTS_DIR)
+                        .join(decoded.into_owned())
                 } else {
                     println!("[Accord Protocol] Nierozpoznany format URL!");
                     return Response::builder().status(400).body(vec![]).unwrap();
@@ -90,7 +88,7 @@ fn main() {
                     println!("[Accord Protocol] BŁĄD: Nie znaleziono pliku na dysku!");
                 }
             }
-            
+
             Response::builder().status(404).body(vec![]).unwrap()
         })
         .invoke_handler(tauri::generate_handler![
@@ -105,9 +103,9 @@ fn main() {
             notes::update_note,
             notes::soft_delete_note,
             search::search_notes,
-            attachments::attach_file_copy, 
-            attachments::attach_file_move, 
-            attachments::attach_file_link, 
+            attachments::attach_file_copy,
+            attachments::attach_file_move,
+            attachments::attach_file_link,
             attachments::attach_blob,
             clipboard::read_clipboard_image
         ])

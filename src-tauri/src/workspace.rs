@@ -1,8 +1,8 @@
+use crate::constants::{APP_NAME, APP_ORG, APP_QUALIFIER, ATTACHMENTS_DIR};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use crate::constants::{APP_QUALIFIER, APP_ORG, APP_NAME, ATTACHMENTS_DIR};
 
 // structure to save as a JSON file in the system
 #[derive(Serialize, Deserialize)]
@@ -40,16 +40,18 @@ pub fn get_workspace() -> Option<String> {
 #[tauri::command]
 pub fn set_workspace(path: String) -> Result<(), String> {
     let config_path = get_config_path().ok_or("Could not find system config directory.")?;
-    
+
     // create a main workspace folder and a subfolder for attachments
     let workspace_dir = PathBuf::from(&path);
     fs::create_dir_all(&workspace_dir).map_err(|e| e.to_string())?;
     fs::create_dir_all(workspace_dir.join(ATTACHMENTS_DIR)).map_err(|e| e.to_string())?;
 
     // save selection in the config.json file
-    let config = AppConfig { workspace_path: path };
+    let config = AppConfig {
+        workspace_path: path,
+    };
     let config_json = serde_json::to_string(&config).map_err(|e| e.to_string())?;
     fs::write(config_path, config_json).map_err(|e| e.to_string())?;
-    
+
     Ok(())
 }

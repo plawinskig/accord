@@ -12,7 +12,8 @@ use std::io::Cursor;
 // in which case the frontend's existing text-based paste handling takes over).
 #[tauri::command]
 pub fn read_clipboard_image() -> Result<Option<String>, String> {
-    let mut clipboard = Clipboard::new().map_err(|e| format!("Nie udało się otworzyć schowka: {e}"))?;
+    let mut clipboard =
+        Clipboard::new().map_err(|e| format!("Nie udało się otworzyć schowka: {e}"))?;
 
     let img = match clipboard.get_image() {
         Ok(img) => img,
