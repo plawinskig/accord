@@ -85,6 +85,9 @@
 		if (!e.clipboardData) return;
 		let handled = false;
 
+		// console.log('types:', e.clipboardData.types);
+		// console.log('items:', Array.from(e.clipboardData.items).map(i => i.kind + '/' + i.type));
+
 		// 1. Sprawdzamy czy w schowku jest fizyczny obrazek (Narzędzie wycinania)
 		// Używamy Array.from, bo WebKit na Linuxie czasem źle iteruje po .items
 		const items = Array.from(e.clipboardData.items || []);
