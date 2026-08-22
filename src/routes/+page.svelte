@@ -58,14 +58,14 @@
 	}
 </script>
 
-<main class="flex h-screen w-screen items-center justify-center bg-[#1e1f22] text-white">
+<main class="flex h-screen w-screen items-center justify-center bg-surface-base text-white">
 	{#if loading}
 		<div class="text-gray-400">Loading...</div>
 	{:else if error}
 		<div class="text-red-400">Error: {error}</div>
 	{:else if !workspace}
 		<!-- welcome screen (no workspace) -->
-		<div class="flex max-w-md flex-col items-center rounded-lg bg-[#2b2d31] p-8 text-center shadow-lg">
+		<div class="flex max-w-md flex-col items-center rounded-lg bg-surface-sidebar p-8 text-center shadow-lg">
 			<h1 class="mb-4 text-3xl font-bold text-white">Welcome to Accord</h1>
 			<p class="mb-8 text-sm text-gray-300">
 				To get started, choose a local folder where all your notes, databases, and attachments will be securely stored.
@@ -79,7 +79,7 @@
 		</div>
 	{:else if dbConnected}
 		<!-- MAIN APPLICATION INTERFACE -->
-		<div class="flex h-screen w-screen overflow-hidden bg-[#313338] text-white">
+		<div class="flex h-screen w-screen overflow-hidden bg-surface-chat text-white">
 			
 			<!-- 1. left column: channel/folder list -->
 			<Sidebar />
@@ -90,9 +90,9 @@
 			</div>
 
 			<!-- 3. right column: space for tags and search -->
-			<div class="hidden w-87.5 bg-[#2b2d31] border-l border-[#1e1f22] lg:flex lg:flex-col">
+			<div class="hidden w-87.5 bg-surface-sidebar border-l border-surface-base lg:flex lg:flex-col">
 				<!-- Top bar with search function -->
-				<div class="flex h-12 items-center justify-end border-b border-[#1e1f22] px-4 shadow-sm">
+				<div class="flex h-12 items-center justify-end border-b border-surface-base px-4 shadow-sm">
 					<SearchBar />
 				</div>
 				<!-- tags soon -->
