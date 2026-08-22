@@ -17,13 +17,13 @@ pub fn read_clipboard_image() -> Result<Option<String>, String> {
 
     let img = match clipboard.get_image() {
         Ok(img) => img,
-        Err(_) => return Ok(None), // brak obrazka w schowku - to nie błąd
+        Err(_) => return Ok(None),
     };
 
     let width = img.width as u32;
     let height = img.height as u32;
 
-    // arboard zwraca surowe piksele RGBA8, kodujemy je do PNG w pamięci
+    // arboard returns raw RGBA8 pixels; encode them into a PNG in memory
     let buffer: ImageBuffer<Rgba<u8>, Vec<u8>> =
         ImageBuffer::from_raw(width, height, img.bytes.into_owned())
             .ok_or("Nieprawidłowe dane obrazu ze schowka")?;
