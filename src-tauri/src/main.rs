@@ -101,7 +101,7 @@ fn main() {
             notes::get_notes,
             notes::create_note,
             notes::update_note,
-            notes::soft_delete_note,                                    
+            notes::soft_delete_note,
             search::search_notes,
             attachments::attach_file_copy,
             attachments::attach_file_move,
