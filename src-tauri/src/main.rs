@@ -15,6 +15,7 @@ mod notes;
 mod search;
 mod workspace;
 mod attachments;
+mod clipboard;
 
 // app memory
 pub struct AppState {
@@ -107,7 +108,8 @@ fn main() {
             attachments::attach_file_copy, 
             attachments::attach_file_move, 
             attachments::attach_file_link, 
-            attachments::attach_blob
+            attachments::attach_blob,
+            clipboard::read_clipboard_image
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

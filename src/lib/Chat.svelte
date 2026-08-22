@@ -80,13 +80,48 @@
 		}
 	}
 
+	// OBEJŚCIE DLA LINUXA: WebKitGTK nie zawsze wystawia obrazek (np. zrzut
+	// ekranu) przez e.clipboardData.items, mimo że fizycznie jest w schowku
+	// systemowym. Dlatego przy Ctrl+V pytamy najpierw backend (arboard/GTK)
+	// wprost o zawartość schowka. Jeśli backend zwróci obrazek - wygrywa on
+	// i blokujemy domyślny "paste". Jeśli nie (bo w schowku jest np. tekst
+	// albo ścieżka pliku skopiowana z eksploratora) - zwykły handlePaste
+	// poniżej obsłuży to tak jak dotychczas.
+	async function handleKeydownPasteFallback(e: KeyboardEvent) {
+		if (!((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v')) return;
+
+		try {
+			const base64Png = await invoke<string | null>('read_clipboard_image');
+			if (base64Png) {
+				e.preventDefault();
+				const byteChars = atob(base64Png);
+				const byteNumbers = new Array(byteChars.length);
+				for (let i = 0; i < byteChars.length; i++) {
+					byteNumbers[i] = byteChars.charCodeAt(i);
+				}
+				const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'image/png' });
+
+				pendingFiles = [...pendingFiles, {
+					id: Math.random().toString(),
+					name: `Screenshot_${new Date().getTime()}.png`,
+					type: 'blob',
+					mimeType: 'image/png',
+					data: blob,
+					operation: 'COPY'
+				}];
+			}
+			// jeśli base64Png === null, nic nie robimy - event "paste" i tak
+			// zaraz odpali się normalnie i trafi do handlePaste niżej
+		} catch (err) {
+			console.error('Nie udało się odczytać schowka natywnie:', err);
+			// w razie błędu po prostu pozwalamy zadziałać zwykłemu handlePaste
+		}
+	}
+
 	// OBSŁUGA SCHOWKA (CTRL+V) - Wersja Ostateczna (Kuloodporna)
 	function handlePaste(e: ClipboardEvent) {
 		if (!e.clipboardData) return;
 		let handled = false;
-
-		// console.log('types:', e.clipboardData.types);
-		// console.log('items:', Array.from(e.clipboardData.items).map(i => i.kind + '/' + i.type));
 
 		// 1. Sprawdzamy czy w schowku jest fizyczny obrazek (Narzędzie wycinania)
 		// Używamy Array.from, bo WebKit na Linuxie czasem źle iteruje po .items
@@ -384,10 +419,10 @@
 						<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
 					</button>
 
-					<!-- Nasłuchujemy schowka na onpaste! -->
+					<!-- Nasłuchujemy schowka na onpaste (tekst/ścieżki) i onkeydown (natywny odczyt obrazka na Linuksie)! -->
 					<textarea
 						bind:value={newNoteContent}
-						onkeydown={sendNote}
+						onkeydown={(e) => { handleKeydownPasteFallback(e); sendNote(e); }}
 						onpaste={handlePaste}
 						placeholder="Message #{uiState.activeFolderName} (Ctrl+V to paste image)"
 						class="max-h-[50vh] w-full resize-none bg-transparent px-4 py-3 text-sm text-gray-200 placeholder-gray-500 focus:outline-none"
