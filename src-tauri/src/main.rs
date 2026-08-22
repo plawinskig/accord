@@ -97,7 +97,7 @@ fn main() {
             db::connect_to_db,
             folders::get_folders,
             folders::create_folder,
-            folders::soft_delete_folder,
+            folders::soft_delete_folder,                                 
             notes::get_notes,
             notes::create_note,
             notes::update_note,

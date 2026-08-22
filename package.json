@@ -26,6 +26,7 @@
     "@tailwindcss/vite": "^4.3.0",
     "@tauri-apps/cli": "^2",
     "autoprefixer": "^10.5.4",
+    "lefthook": "^2.1.10",
     "postcss": "^8.5.26",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
