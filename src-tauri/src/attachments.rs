@@ -221,7 +221,13 @@ pub async fn attach_blob(
     };
 
     let id = Uuid::new_v4().to_string();
-    let new_file_name = format!("{}.png", id);
+
+    let extension = std::path::Path::new(&original_name)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("bin");
+
+    let new_file_name = format!("{}.{}", id, extension);
 
     let target_path = Path::new(&workspace)
         .join(ATTACHMENTS_DIR)
