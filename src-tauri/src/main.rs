@@ -25,6 +25,7 @@ pub struct AppState {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .manage(AppState {
             db: TokioMutex::new(None),
             workspace_path: StdMutex::new(None),
