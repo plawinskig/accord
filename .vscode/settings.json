@@ -9,6 +9,12 @@
       "task": "Tauri Dev",
       "tooltip": "Uruchamia serwer developerski Tauri",
       "color": "warning"
+    },
+    {
+      "label": "Cargo Format",
+      "task": "Cargo Format",
+      "tooltip": "Uruchamia cargo format dla projektu Rust",
+      "color": "warning"
     }
-  ]
+  ],
 }
