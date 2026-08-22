@@ -1,7 +1,7 @@
+use crate::AppState;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
-use crate::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Note {
@@ -42,7 +42,11 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
 
 // Add new note
 #[tauri::command]
-pub async fn create_note(folder_id: String, content: String, state: State<'_, AppState>) -> Result<Note, String> {
+pub async fn create_note(
+    folder_id: String,
+    content: String,
+    state: State<'_, AppState>,
+) -> Result<Note, String> {
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
@@ -50,7 +54,9 @@ pub async fn create_note(folder_id: String, content: String, state: State<'_, Ap
 
     sqlx::query!(
         "INSERT INTO notes (id, folder_id, content, is_deleted) VALUES (?, ?, ?, 0)",
-        id, folder_id, content
+        id,
+        folder_id,
+        content
     )
     .execute(pool)
     .await
@@ -79,13 +85,18 @@ pub async fn create_note(folder_id: String, content: String, state: State<'_, Ap
 
 // Edit the note
 #[tauri::command]
-pub async fn update_note(id: String, content: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn update_note(
+    id: String,
+    content: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
     sqlx::query!(
         "UPDATE notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-        content, id
+        content,
+        id
     )
     .execute(pool)
     .await

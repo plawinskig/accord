@@ -1,10 +1,10 @@
+use crate::constants::ATTACHMENTS_DIR;
+use crate::AppState;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use tauri::State;
 use uuid::Uuid;
-use crate::AppState;
-use crate::constants::ATTACHMENTS_DIR;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
 #[serde(rename_all = "UPPERCASE")]
@@ -42,21 +42,20 @@ pub async fn attach_file_copy(
     mime_type: String,
     state: State<'_, AppState>,
 ) -> Result<Attachment, String> {
-    
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
-    
+
     let ws_guard = state.workspace_path.lock().await;
     let workspace = ws_guard.as_ref().ok_or("Workspace path not loaded")?;
 
     let id = Uuid::new_v4().to_string();
-    
+
     // get file extension from the original filename
     let ext = Path::new(&original_name)
         .extension()
         .and_then(|os_str| os_str.to_str())
         .unwrap_or("");
-        
+
     // generate a secure file name UUID.extension
     let new_file_name = if ext.is_empty() {
         id.clone()
@@ -64,7 +63,9 @@ pub async fn attach_file_copy(
         format!("{}.{}", id, ext)
     };
 
-    let target_path = Path::new(workspace).join(ATTACHMENTS_DIR).join(&new_file_name);
+    let target_path = Path::new(workspace)
+        .join(ATTACHMENTS_DIR)
+        .join(&new_file_name);
 
     // copy the file to the hidden folder
     fs::copy(&source_path, &target_path).map_err(|e| format!("Failed to copy file: {}", e))?;
@@ -82,18 +83,16 @@ pub async fn attach_file_copy(
 
     // check to see if the database has accepted the data
     match result {
-        Ok(_) => {
-            Ok(Attachment {
-                id,
-                note_id,
-                original_name,
-                operation_type: op_type,
-                local_path: new_file_name,
-                mime_type,
-            })
-        }
+        Ok(_) => Ok(Attachment {
+            id,
+            note_id,
+            original_name,
+            operation_type: op_type,
+            local_path: new_file_name,
+            mime_type,
+        }),
         Err(e) => {
-            let _ = fs::remove_file(target_path); 
+            let _ = fs::remove_file(target_path);
             Err(e.to_string())
         }
     }

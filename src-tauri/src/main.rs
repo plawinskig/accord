@@ -3,13 +3,13 @@
 use sqlx::SqlitePool;
 use tokio::sync::Mutex;
 
-mod workspace;
+mod attachments;
+mod constants;
 mod db;
 mod folders;
 mod notes;
 mod search;
-mod attachments;
-mod constants;
+mod workspace;
 
 // app memory
 pub struct AppState {
