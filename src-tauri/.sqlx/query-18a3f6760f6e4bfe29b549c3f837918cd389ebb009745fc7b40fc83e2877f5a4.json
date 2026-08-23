@@ -1,0 +1,80 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT\n            n.id as \"note_id!\",\n            n.folder_id as \"folder_id!\",\n            n.content as \"content!\",\n            DATETIME(n.created_at, 'localtime') as \"created_at!: String\",\n            DATETIME(n.updated_at, 'localtime') as \"updated_at!: String\",\n            a.id as \"att_id?\",\n            a.note_id as \"att_note_id?\",\n            a.original_name as \"att_original_name?\",\n            a.operation_type as \"att_operation_type?: crate::attachments::OperationType\",\n            a.local_path as \"att_local_path?\",\n            a.mime_type as \"att_mime_type?\"\n        FROM notes n\n        LEFT JOIN attachments a ON a.note_id = n.id\n        WHERE n.folder_id = ? AND n.is_deleted = 0\n        ORDER BY n.created_at ASC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "note_id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "folder_id!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "content!",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at!: String",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "att_id?",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "att_note_id?",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "att_original_name?",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "att_operation_type?: crate::attachments::OperationType",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "att_local_path?",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "att_mime_type?",
+        "ordinal": 10,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "18a3f6760f6e4bfe29b549c3f837918cd389ebb009745fc7b40fc83e2877f5a4"
+}
