@@ -35,13 +35,12 @@ fn main() {
             let ws_guard = state.workspace_path.lock().unwrap();
 
             if let Some(ws) = ws_guard.as_ref() {
-                // 1. Zamiast dzielić na host i path, bierzemy po prostu cały surowy URL
+                // instead of splitting it into host and path, simply take the entire raw URL
                 let uri_str = request.uri().to_string();
 
-                // Wypiszemy to do terminala, żeby w razie problemów widzieć co się dzieje!
-                println!("[Accord Protocol] Otrzymano żądanie: {}", uri_str);
+                println!("[Accord Protocol] A request was received: {}", uri_str);
 
-                // 2. Szukamy naszych słów kluczowych niezależnie od tego, jak Tauri sparsowało link
+                // search for keywords regardless of how tauri has structured the link
                 let file_path = if let Some((_, local_part)) = uri_str.split_once("accord://local/")
                 {
                     let decoded = urlencoding::decode(local_part).unwrap_or_default();
@@ -52,7 +51,7 @@ fn main() {
                     let decoded = urlencoding::decode(link_part).unwrap_or_default();
                     PathBuf::from(decoded.into_owned())
                 } else if let Some((_, local_part)) = uri_str.split_once("/local/") {
-                    // Fallback jeśli Tauri wstrzyknęło np. "localhost" w środek linku
+                    // fallback if tauri inserted, for example, “localhost” into the middle of the link
                     let decoded = urlencoding::decode(local_part).unwrap_or_default();
                     Path::new(ws)
                         .join(constants::ATTACHMENTS_DIR)
@@ -64,7 +63,7 @@ fn main() {
 
                 println!("[Accord Protocol] Szukam pliku na dysku: {:?}", file_path);
 
-                // 3. Odczytujemy plik i nadajemy mu odpowiedni typ (MIME), by przeglądarka umiała go narysować
+                // read the file and assign it the appropriate MIME type
                 if let Ok(data) = fs::read(&file_path) {
                     let extension = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
                     let mime_type = match extension.to_lowercase().as_str() {
