@@ -55,17 +55,19 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
     let mut index_by_note_id: HashMap<String, usize> = HashMap::new();
 
     for row in rows {
-        let note_idx = *index_by_note_id.entry(row.note_id.clone()).or_insert_with(|| {
-            notes.push(Note {
-                id: row.note_id.clone(),
-                folder_id: row.folder_id.clone(),
-                content: row.content.clone(),
-                created_at: row.created_at.clone(),
-                updated_at: row.updated_at.clone(),
-                attachments: Some(Vec::new()),
+        let note_idx = *index_by_note_id
+            .entry(row.note_id.clone())
+            .or_insert_with(|| {
+                notes.push(Note {
+                    id: row.note_id.clone(),
+                    folder_id: row.folder_id.clone(),
+                    content: row.content.clone(),
+                    created_at: row.created_at.clone(),
+                    updated_at: row.updated_at.clone(),
+                    attachments: Some(Vec::new()),
+                });
+                notes.len() - 1
             });
-            notes.len() - 1
-        });
 
         if let (
             Some(att_id),

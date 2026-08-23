@@ -9,7 +9,10 @@ use tauri::{Manager, UriSchemeContext, Wry};
 /// to load attachment files straight from disk (both files copied/moved into
 /// the workspace, and files that are only linked in place), bypassing the
 /// default asset protocol.
-pub fn handle_accord_protocol(ctx: UriSchemeContext<'_, Wry>, request: Request<Vec<u8>>) -> Response<Vec<u8>> {
+pub fn handle_accord_protocol(
+    ctx: UriSchemeContext<'_, Wry>,
+    request: Request<Vec<u8>>,
+) -> Response<Vec<u8>> {
     let app = ctx.app_handle();
     let state = app.state::<AppState>();
     let ws_guard = state.workspace_path.lock().unwrap();
@@ -26,7 +29,10 @@ pub fn handle_accord_protocol(ctx: UriSchemeContext<'_, Wry>, request: Request<V
         return bad_request();
     };
 
-    println!("[Accord Protocol] Looking for the file on disk: {:?}", file_path);
+    println!(
+        "[Accord Protocol] Looking for the file on disk: {:?}",
+        file_path
+    );
 
     match fs::read(&file_path) {
         Ok(data) => {
@@ -55,13 +61,21 @@ pub fn handle_accord_protocol(ctx: UriSchemeContext<'_, Wry>, request: Request<V
 fn resolve_file_path(workspace: &str, uri_str: &str) -> Option<PathBuf> {
     if let Some((_, local_part)) = uri_str.split_once("accord://local/") {
         let decoded = urlencoding::decode(local_part).unwrap_or_default();
-        Some(Path::new(workspace).join(ATTACHMENTS_DIR).join(decoded.into_owned()))
+        Some(
+            Path::new(workspace)
+                .join(ATTACHMENTS_DIR)
+                .join(decoded.into_owned()),
+        )
     } else if let Some((_, link_part)) = uri_str.split_once("accord://link/") {
         let decoded = urlencoding::decode(link_part).unwrap_or_default();
         Some(PathBuf::from(decoded.into_owned()))
     } else if let Some((_, local_part)) = uri_str.split_once("/local/") {
         let decoded = urlencoding::decode(local_part).unwrap_or_default();
-        Some(Path::new(workspace).join(ATTACHMENTS_DIR).join(decoded.into_owned()))
+        Some(
+            Path::new(workspace)
+                .join(ATTACHMENTS_DIR)
+                .join(decoded.into_owned()),
+        )
     } else {
         None
     }
@@ -97,19 +111,33 @@ mod tests {
     #[test]
     fn resolves_local_path_inside_attachments_dir() {
         let path = resolve_file_path("/home/user/workspace", "accord://local/abc-123.png").unwrap();
-        assert_eq!(path, PathBuf::from("/home/user/workspace/attachments/abc-123.png"));
+        assert_eq!(
+            path,
+            PathBuf::from("/home/user/workspace/attachments/abc-123.png")
+        );
     }
 
     #[test]
     fn resolves_link_path_as_is() {
-        let path = resolve_file_path("/home/user/workspace", "accord://link/%2Fhome%2Fuser%2Fdoc.pdf").unwrap();
+        let path = resolve_file_path(
+            "/home/user/workspace",
+            "accord://link/%2Fhome%2Fuser%2Fdoc.pdf",
+        )
+        .unwrap();
         assert_eq!(path, PathBuf::from("/home/user/doc.pdf"));
     }
 
     #[test]
     fn falls_back_to_bare_local_segment() {
-        let path = resolve_file_path("/home/user/workspace", "http://accord.localhost/local/abc.png").unwrap();
-        assert_eq!(path, PathBuf::from("/home/user/workspace/attachments/abc.png"));
+        let path = resolve_file_path(
+            "/home/user/workspace",
+            "http://accord.localhost/local/abc.png",
+        )
+        .unwrap();
+        assert_eq!(
+            path,
+            PathBuf::from("/home/user/workspace/attachments/abc.png")
+        );
     }
 
     #[test]
@@ -121,6 +149,9 @@ mod tests {
     fn mime_type_matches_known_extensions() {
         assert_eq!(mime_type_for(Path::new("photo.PNG")), "image/png");
         assert_eq!(mime_type_for(Path::new("doc.pdf")), "application/pdf");
-        assert_eq!(mime_type_for(Path::new("archive.zip")), "application/octet-stream");
+        assert_eq!(
+            mime_type_for(Path::new("archive.zip")),
+            "application/octet-stream"
+        );
     }
 }
