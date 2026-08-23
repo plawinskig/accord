@@ -104,7 +104,7 @@
 				const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'image/png' });
 
 				pendingFiles = [...pendingFiles, {
-					id: Math.random().toString(),
+					id: crypto.randomUUID(),
 					name: `Screenshot_${new Date().getTime()}.png`,
 					type: 'blob',
 					mimeType: 'image/png',
@@ -133,7 +133,7 @@
 				const blob = item.getAsFile();
 				if (blob) {
 					pendingFiles = [...pendingFiles, {
-						id: Math.random().toString(),
+						id: crypto.randomUUID(),
 						name: `Screenshot_${new Date().getTime()}.png`,
 						type: 'blob',
 						mimeType: blob.type,
@@ -171,7 +171,7 @@
 					const name = decodedPath.split(/[/\\]/).pop() || 'Unknown';
 					
 					pendingFiles = [...pendingFiles, {
-						id: Math.random().toString(),
+						id: crypto.randomUUID(),
 						name: name,
 						type: 'path',
 						mimeType: 'application/octet-stream',
@@ -243,7 +243,7 @@
 		for (const path of paths) {
 			const name = path.split(/[/\\]/).pop() || 'Unknown';
 			pendingFiles = [...pendingFiles, {
-				id: Math.random().toString(),
+				id: crypto.randomUUID(),
 				name,
 				type: 'path',
 				mimeType: 'application/octet-stream',
@@ -263,7 +263,7 @@
 
 				const name = typeof selectedPath === 'string' ? selectedPath.split(/[/\\]/).pop() : 'Unknown';
 				pendingFiles = [...pendingFiles, {
-					id: Math.random().toString(),
+					id: crypto.randomUUID(),
 					name: name || 'Unknown',
 					type: 'path',
 					mimeType: 'application/octet-stream',
