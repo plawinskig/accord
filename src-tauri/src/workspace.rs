@@ -4,17 +4,17 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
-// structure to save as a JSON file in the system
+// Define the structure to save as a system JSON file
 #[derive(Serialize, Deserialize)]
 pub struct AppConfig {
     pub workspace_path: String,
 }
 
-// finds the system settings folder (~/.config/accord on Linux)
+// Find the system settings folder (~/.config/accord on Linux)
 pub fn get_config_path() -> Option<PathBuf> {
     if let Some(proj_dirs) = ProjectDirs::from(APP_QUALIFIER, APP_ORG, APP_NAME) {
         let config_dir = proj_dirs.config_dir();
-        // if the settings folder does not exist create it
+        // Create the settings folder if it does not exist
         if !config_dir.exists() {
             let _ = fs::create_dir_all(config_dir);
         }
@@ -24,7 +24,7 @@ pub fn get_config_path() -> Option<PathBuf> {
     }
 }
 
-// frontend asks if we already have a workspace set
+// Let the frontend check whether a workspace is already set
 #[tauri::command]
 pub fn get_workspace() -> Option<String> {
     let path = get_config_path()?;
@@ -36,17 +36,17 @@ pub fn get_workspace() -> Option<String> {
     None
 }
 
-// frontend sends the user-selected path
+// Accept the path selected by the user in the frontend
 #[tauri::command]
 pub fn set_workspace(path: String) -> Result<(), String> {
     let config_path = get_config_path().ok_or("Could not find system config directory.")?;
 
-    // create a main workspace folder and a subfolder for attachments
+    // Create the main workspace folder and an attachments subfolder
     let workspace_dir = PathBuf::from(&path);
     fs::create_dir_all(&workspace_dir).map_err(|e| e.to_string())?;
     fs::create_dir_all(workspace_dir.join(ATTACHMENTS_DIR)).map_err(|e| e.to_string())?;
 
-    // save selection in the config.json file
+    // Save the selection in the config.json file
     let config = AppConfig {
         workspace_path: path,
     };

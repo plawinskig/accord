@@ -11,7 +11,7 @@
 	let dbConnected = false;
 	let error = '';
 
-	// connects to the database and runs the application
+	// Connect to the database and run the application
 	async function initApp(path: string) {
 		try {
 			await invoke('connect_to_db', { workspacePath: path });
@@ -21,7 +21,7 @@
 		}
 	}
 
-	// after loading the interface ask if the config already exists
+	// Ask whether the configuration already exists after loading the interface
 	onMount(async () => {
 		try {
 			workspace = await invoke('get_workspace');
@@ -35,7 +35,7 @@
 		}
 	});
 
-	// opens the system folder selection window
+	// Open the system folder selection window
 	async function selectFolder() {
 		try {
 			const selectedPath = await open({
@@ -45,7 +45,7 @@
 			});
 
 			if (selectedPath) {
-				// send the selected path to Rust (then create folders and save the config)
+				// Send the selected path to Rust, then create folders and save the configuration
 				await invoke('set_workspace', { path: selectedPath });
 				workspace = selectedPath as string;
 				await initApp(workspace);
@@ -58,14 +58,14 @@
 	}
 </script>
 
-<main class="flex h-screen w-screen items-center justify-center bg-[#1e1f22] text-white">
+<main class="flex h-screen w-screen items-center justify-center bg-surface-base text-white">
 	{#if loading}
 		<div class="text-gray-400">Loading...</div>
 	{:else if error}
 		<div class="text-red-400">Error: {error}</div>
 	{:else if !workspace}
-		<!-- welcome screen (no workspace) -->
-		<div class="flex max-w-md flex-col items-center rounded-lg bg-[#2b2d31] p-8 text-center shadow-lg">
+		<!-- Show the welcome screen when no workspace is configured -->
+		<div class="flex max-w-md flex-col items-center rounded-lg bg-surface-sidebar p-8 text-center shadow-lg">
 			<h1 class="mb-4 text-3xl font-bold text-white">Welcome to Accord</h1>
 			<p class="mb-8 text-sm text-gray-300">
 				To get started, choose a local folder where all your notes, databases, and attachments will be securely stored.
@@ -78,24 +78,24 @@
 			</button>
 		</div>
 	{:else if dbConnected}
-		<!-- MAIN APPLICATION INTERFACE -->
-		<div class="flex h-screen w-screen overflow-hidden bg-[#313338] text-white">
+		<!-- Render the main application interface -->
+		<div class="flex h-screen w-screen overflow-hidden bg-surface-chat text-white">
 			
-			<!-- 1. left column: channel/folder list -->
+			<!-- Render the left channel and folder column -->
 			<Sidebar />
 			
-			<!-- 2. mid column: chat space -->
+			<!-- Render the middle chat column -->
 			<div class="flex flex-1 flex-col">
 				<Chat />
 			</div>
 
-			<!-- 3. right column: space for tags and search -->
-			<div class="hidden w-87.5 bg-[#2b2d31] border-l border-[#1e1f22] lg:flex lg:flex-col">
-				<!-- Top bar with search function -->
-				<div class="flex h-12 items-center justify-end border-b border-[#1e1f22] px-4 shadow-sm">
+			<!-- Render the right tags and search column -->
+			<div class="hidden w-87.5 bg-surface-sidebar border-l border-surface-base lg:flex lg:flex-col">
+				<!-- Render the search bar -->
+				<div class="flex h-12 items-center justify-end border-b border-surface-base px-4 shadow-sm">
 					<SearchBar />
 				</div>
-				<!-- tags soon -->
+				<!-- Add tags here later -->
 				<div class="flex-1 p-4 text-center text-sm text-gray-500">
 					Tags will appear here
 				</div>

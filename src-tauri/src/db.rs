@@ -8,12 +8,12 @@ use std::path::Path;
 use std::str::FromStr;
 use tauri::State;
 
-// internal function connecting to the database in workspace
+// Connect to the workspace database internally
 pub async fn init_db(workspace_path: &str) -> Result<SqlitePool, String> {
     let db_path = Path::new(workspace_path).join(DB_FILE_NAME);
     let db_url = format!("sqlite://{}", db_path.to_string_lossy());
 
-    // set options: create a file if it does not exist and use WAL mode for security
+    // Set options to create a missing file and use WAL mode for security
     let options = SqliteConnectOptions::from_str(&db_url)
         .map_err(|e| e.to_string())?
         .create_if_missing(true)
@@ -24,7 +24,7 @@ pub async fn init_db(workspace_path: &str) -> Result<SqlitePool, String> {
         .await
         .map_err(|e| e.to_string())?;
 
-    // searches the "./migrations" folder and applies undone migrations
+    // Search the "./migrations" folder and apply pending migrations
     sqlx::migrate!("./migrations")
         .run(&pool)
         .await
@@ -33,7 +33,7 @@ pub async fn init_db(workspace_path: &str) -> Result<SqlitePool, String> {
     Ok(pool)
 }
 
-// command called right after the path is loaded
+// Call this command immediately after loading the path
 #[tauri::command]
 pub async fn connect_to_db(
     workspace_path: String,
@@ -41,10 +41,10 @@ pub async fn connect_to_db(
 ) -> Result<(), String> {
     let pool = init_db(&workspace_path).await?;
 
-    // save the connection pool in the application's memory (state) so that other functions can access it
+    // Save the connection pool in application state so other functions can access it
     *state.db.lock().await = Some(pool);
-    // save the path so the attachments module can access it
-    *state.workspace_path.lock().await = Some(workspace_path);
+    // Save the path so the attachments module can access it
+    *state.workspace_path.lock().unwrap() = Some(workspace_path);
 
     Ok(())
 }
