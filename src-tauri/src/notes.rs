@@ -19,7 +19,6 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
-    // Pobieramy surowe rekordy (omijamy restrykcje query_as!)
     let notes_records = sqlx::query!(
         r#"
         SELECT 
@@ -40,7 +39,7 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
 
     let mut notes = Vec::new();
 
-    // Ręcznie budujemy struktury Note dociągając do nich załączniki
+    // SLOW N+1
     for record in notes_records {
         let atts = sqlx::query_as!(
             crate::attachments::Attachment,
