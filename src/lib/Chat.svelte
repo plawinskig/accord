@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/core';
 	import { open } from '@tauri-apps/plugin-dialog';
+	import { getCurrentWebview } from '@tauri-apps/api/webview';
+	import { onMount, onDestroy } from 'svelte';
 	import { uiState } from '$lib/state.svelte';
 
 	interface Attachment {
@@ -32,6 +34,11 @@
 	let notes = $state<Note[]>([]);
 	let newNoteContent = $state('');
 	let pendingFiles = $state<PendingFile[]>([]);
+
+	// True while an OS-level file drag is hovering over the window, used for
+	// a visual drop-zone highlight (there is no DOM dragover event to hook
+	// into here - see the onDragDropEvent listener below).
+	let isDraggingOver = $state(false);
 	
 	// Track the edit status
 	let editingId = $state<string | null>(null);
@@ -183,19 +190,57 @@
 		}
 	}
 
-	// Handle drag and drop
-	function handleDrop(e: DragEvent) {
-		e.preventDefault();
-		if (!e.dataTransfer) return;
-		
-		for (const file of e.dataTransfer.files) {
+	// Handle native OS-level drag & drop.
+	// Tauri v2 intercepts window drag-and-drop before it ever reaches the DOM
+	// (window-level `dragDropEnabled` defaults to true), so `ondrop`/`ondragover`
+	// on a <div> never fire with real files. Instead we listen to Tauri's own
+	// webview event, which also gives us real filesystem paths - letting the
+	// user pick COPY/MOVE/LINK exactly like the file picker does, instead of
+	// only ever being able to copy raw bytes.
+	let unlistenDrop: (() => void) | undefined;
+
+	onMount(() => {
+		(async () => {
+			unlistenDrop = await getCurrentWebview().onDragDropEvent((event) => {
+				if (event.payload.type === 'enter' || event.payload.type === 'over') {
+					isDraggingOver = true;
+				} else if (event.payload.type === 'drop') {
+					isDraggingOver = false;
+					handleNativeDrop(event.payload.paths);
+				} else if (event.payload.type === 'leave') {
+					isDraggingOver = false;
+				}
+			});
+		})();
+	});
+
+	onDestroy(() => {
+		unlistenDrop?.();
+	});
+
+	async function handleNativeDrop(paths: string[]) {
+		if (!paths || paths.length === 0) return;
+
+		const op = prompt(
+			paths.length === 1
+				? 'Do you want to COPY, MOVE, or LINK the file?\nType: COPY, MOVE, or LINK'
+				: `Do you want to COPY, MOVE, or LINK these ${paths.length} files?\nType: COPY, MOVE, or LINK`,
+			'COPY'
+		);
+		if (!op) return;
+
+		const operation = op.toUpperCase();
+		if (!['COPY', 'MOVE', 'LINK'].includes(operation)) return;
+
+		for (const path of paths) {
+			const name = path.split(/[/\\]/).pop() || 'Unknown';
 			pendingFiles = [...pendingFiles, {
 				id: Math.random().toString(),
-				name: file.name,
-				type: 'blob',
-				mimeType: file.type || 'application/octet-stream',
-				data: file,
-				operation: 'COPY'
+				name,
+				type: 'path',
+				mimeType: 'application/octet-stream',
+				path,
+				operation: operation as 'COPY' | 'MOVE' | 'LINK'
 			}];
 		}
 	}
@@ -332,10 +377,13 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div 
-	ondrop={handleDrop} 
-	ondragover={(e) => e.preventDefault()}
-	class="flex h-full flex-col bg-surface-chat"
+	class="relative flex h-full flex-col bg-surface-chat transition-colors {isDraggingOver ? 'ring-2 ring-inset ring-indigo-500' : ''}"
 >
+	{#if isDraggingOver}
+		<div class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-indigo-500/10">
+			<span class="rounded bg-surface-base px-4 py-2 text-sm font-medium text-indigo-400 shadow">Drop file to attach</span>
+		</div>
+	{/if}
 	{#if uiState.activeFolderId}
 		<div class="flex h-12 items-center border-b border-surface-divider px-4 font-bold shadow-sm">
 			<span class="mr-2 text-xl text-gray-500">#</span>
