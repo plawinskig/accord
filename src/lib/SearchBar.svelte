@@ -6,7 +6,7 @@
 	let results = $state<any[]>([]);
 	let isFocused = $state(false);
 	
-	// wait a moment after releasing the key before sending a signal to the base
+	// Wait briefly after key release before querying the database
 	let debounceTimer: ReturnType<typeof setTimeout>;
 
 	async function performSearch() {
@@ -28,16 +28,16 @@
 	}
 
 	function selectResult(result: any) {
-		// change the active folder to the one from the note
+		// Change the active folder to the note's folder
 		uiState.activeFolderId = result.folder_id;
 		uiState.activeFolderName = result.folder_name;
 		
-		// a moment to render the chat and then specify the note to highlight
+		// Wait for the chat to render, then specify the note to highlight
 		setTimeout(() => {
 			uiState.highlightNoteId = result.note_id;
 		}, 50);
 
-		// reset the search engine
+		// Reset the search state
 		query = '';
 		results = [];
 		isFocused = false;
@@ -45,7 +45,7 @@
 </script>
 
 <div class="relative w-full max-w-sm">
-	<!-- input bar -->
+	<!-- Render the input bar -->
 	<div class="relative flex items-center">
 		<input
 			type="text"
@@ -61,7 +61,7 @@
 		</svg>
 	</div>
 
-	<!-- pop-up window (dropdown) with results -->
+	<!-- Show the results dropdown -->
 	{#if isFocused && query.length >= 2}
 		<div class="absolute right-0 top-10 z-50 w-100 overflow-hidden rounded-md border border-surface-base bg-surface-sidebar shadow-xl">
 			{#if results.length === 0}
@@ -69,7 +69,7 @@
 			{:else}
 				<div class="max-h-[60vh] overflow-y-auto py-2">
 					{#each results as result}
-						<!-- use `onmousedown` instead of `onclick` so that it triggers BEFORE the input loses focus (`onblur`) -->
+						<!-- Use onmousedown so it runs before the input loses focus -->
 						<button 
 							onmousedown={(e) => { e.preventDefault(); selectResult(result); }}
 							class="w-full border-b border-surface-base px-4 py-3 text-left transition-colors hover:bg-surface-hover last:border-0"
@@ -78,7 +78,7 @@
 								<span class="text-xs font-bold text-gray-400">#{result.folder_name}</span>
 								<span class="text-xs text-gray-500">{result.created_at.substring(0, 10)}</span>
 							</div>
-							<!-- render a snippet with highlighting -->
+							<!-- Render the highlighted snippet -->
 							<div class="text-sm text-gray-300">
 								{@html result.snippet}
 							</div>

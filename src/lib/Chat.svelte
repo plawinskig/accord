@@ -33,19 +33,19 @@
 	let newNoteContent = $state('');
 	let pendingFiles = $state<PendingFile[]>([]);
 	
-	// edit status
+	// Track the edit status
 	let editingId = $state<string | null>(null);
 	let editContent = $state('');
 
-	// reference to the notes container (for automatic scrolling)
+	// Keep a reference to the notes container for automatic scrolling
 	let chatContainer = $state<HTMLElement>();
 
-	// action to focus an element (bypasses a11y_autofocus)
+	// Focus an element while bypassing a11y_autofocus
 	function focusOnMount(node: HTMLElement) {
 		node.focus();
 	}
 
-	// automatically respond to `uiState.activeFolderId` change and load new notes
+	// Respond to `uiState.activeFolderId` changes and load the notes
 	$effect(() => {
 		if (uiState.activeFolderId) {
 			loadNotes(uiState.activeFolderId);
@@ -54,7 +54,7 @@
 		}
 	});
 
-	// automatic scroll to the bottom when the list of notes changes
+	// Scroll to the bottom when the list of notes changes
 	$effect(() => {
 		if (notes.length >= 0 && chatContainer) {
 			chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -79,13 +79,9 @@
 		}
 	}
 
-	// WORKAROUND FOR LINUX: WebKitGTK does not always return an image (e.g., a screenshot
-    //) via e.clipboardData.items, even though it is physically present in the
-    // system clipboard. Therefore, when Ctrl+V is pressed, first ask the backend (arboard/GTK)
-	// directly for the clipboard’s contents. If the backend returns an image, it takes precedence
-    // and block the default “paste” action. If not (because the clipboard contains, for example, text
-    // or a file path copied from File Explorer), the regular `handlePaste`
-    // below will handle it as before.
+	// On Linux, ask the backend for clipboard contents when WebKitGTK does not
+	// expose an image through e.clipboardData.items. Block the default paste when
+	// the backend returns an image; otherwise let handlePaste process the data.
 	async function handleKeydownPasteFallback(e: KeyboardEvent) {
 		if (!((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v')) return;
 
@@ -109,21 +105,20 @@
 					operation: 'COPY'
 				}];
 			}
-			// if base64Png === null, do nothing — the “paste” event will
-            // still fire normally and be handled by handlePaste below
+			// Do nothing when base64Png === null so the paste event can run normally
 		} catch (err) {
 			console.error('Failed to read the native clipboard:', err);
-			// if an error occurs, simply let the regular handlePaste function run
+			// Let handlePaste run normally when an error occurs
 		}
 	}
 
-	// CLIPBOARD SUPPORT (CTRL+V)
+	// Handle clipboard input (Ctrl+V)
 	function handlePaste(e: ClipboardEvent) {
 		if (!e.clipboardData) return;
 		let handled = false;
 
-		// check if there is a physical image in the clipboard (Snipping Tool)
-        // use Array.from because WebKit on Linux sometimes iterates incorrectly over .items
+		// Check for a physical image and use Array.from because WebKit on Linux
+		// sometimes iterates incorrectly over .items
 		const items = Array.from(e.clipboardData.items || []);
 		
 		for (const item of items) {
@@ -143,22 +138,22 @@
 			}
 		}
 
-		// if it's not a screenshot, try to read it as text (File Explorer)
+		// Read the clipboard as text when it is not a screenshot
 		if (!handled) {
 			const plainText = e.clipboardData.getData('text/plain') || '';
 			const uriList = e.clipboardData.getData('text/uri-list') || '';
 			
-			// combine all the data so we don't miss anything
+			// Combine all clipboard data so nothing is missed
 			const combinedText = `${plainText}\n${uriList}`;
 			
-			// split it into lines and clean each one individually
+			// Split the data into lines and clean each line individually
 			const lines = combinedText.split(/[\r\n]+/).map(line => line.trim()).filter(line => line.length > 0);
 
 			for (let line of lines) {
-				// gggressively remove the quotation marks that Linux tends to add
+				// Remove quotation marks that Linux tends to add
 				line = line.replace(/^['"]|['"]$/g, '');
 				
-				// check if it resembles a system path or a file URL
+				// Check whether the value resembles a system path or file URL
 				if (line.startsWith('file://') || line.startsWith('/')) {
 					
 					let decodedPath = line.replace(/^file:\/\//i, '');
@@ -181,15 +176,14 @@
 			}
 		}
 
-		// if captured a file or image, strictly prohibit
-        // the browser from pasting this data as text into <textarea>
+		// Prevent the browser from pasting a captured file or image as text
 		if (handled) {
 			e.preventDefault();
 			e.stopPropagation();
 		}
 	}
 
-	// DRAG & DROP
+	// Handle drag and drop
 	function handleDrop(e: DragEvent) {
 		e.preventDefault();
 		if (!e.dataTransfer) return;
@@ -206,7 +200,7 @@
 		}
 	}
 
-	// DIALOG HANDLING (Clipboard - Files from Disk)
+	// Handle the file picker dialog
 	async function openFilePicker() {
 		try {
 			const selectedPath = await open({ multiple: false, title: 'Attach File' });
@@ -244,19 +238,19 @@
 			if (newNoteContent.trim() === '' && pendingFiles.length === 0) return;
 
 			try {
-				// create a Note
+				// Create a note
 				const note: Note = await invoke('create_note', { 
 					folderId: uiState.activeFolderId, 
 					content: newNoteContent.trim() 
 				});
 				
-				// upload attachments to the newly created note
+				// Upload attachments to the new note
 				for (const file of pendingFiles) {
 					if (file.type === 'blob' && file.data) {
 						const buffer = await file.data.arrayBuffer();
 						await invoke('attach_blob', { 
 							noteId: note.id, 
-							// pass the entire Uint8Array instead of breaking it down into a million digits and putting them into an array
+							// Pass the entire Uint8Array instead of splitting it into individual values
 							bytes: new Uint8Array(buffer), 
 							originalName: file.name, 
 							mimeType: file.mimeType 
@@ -275,7 +269,7 @@
 					}
 				}
 
-				// clean up the input and pending files, then reload notes
+				// Clear the input and pending files, then reload the notes
 				newNoteContent = '';
 				pendingFiles = [];
 				await loadNotes(uiState.activeFolderId as string);
@@ -286,9 +280,9 @@
 		}
 	}
 
-	// helper function that generates URLs for our accord:// protocol
+	// Generate URLs for the accord:// protocol
 	function getAttachmentUrl(att: Attachment) {
-		// use `encodeURIComponent` to safely pass, for example, spaces in a filename
+		// Use `encodeURIComponent` to safely pass spaces and other filename characters
 		if (att.operation_type === 'LINK') {
 			return `accord://link/${encodeURIComponent(att.local_path)}`;
 		}
@@ -307,19 +301,19 @@
 		}
 	}
 
-	// start editing
+	// Start editing
 	function startEdit(note: Note) {
 		editingId = note.id;
 		editContent = note.content;
 	}
 
-	// cancel editing
+	// Cancel editing
 	function cancelEdit() {
 		editingId = null;
 		editContent = '';
 	}
 
-	// save the edit
+	// Save the edit
 	async function saveEdit(event: KeyboardEvent) {
 		if (event.key === 'Enter' && !event.shiftKey && editContent.trim() !== '') {
 			event.preventDefault();
@@ -354,7 +348,7 @@
 					<div class="mb-1 flex items-center justify-between">
 						<span class="text-xs font-medium text-gray-500">{note.created_at}</span>
 						
-						<!-- Editing Controls -->
+						<!-- Show editing controls -->
 						<div class="absolute -top-3 right-4 hidden space-x-2 rounded-md border border-surface-divider bg-surface-chat px-2 py-1 shadow-sm group-hover:flex">
 							<button onclick={() => startEdit(note)} class="text-gray-400 hover:text-indigo-400" title="Edit">
 								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
@@ -371,11 +365,11 @@
 						<p class="whitespace-pre-wrap text-sm text-gray-200">{note.content}</p>
 					{/if}
 
-					<!-- RENDERING ATTACHMENTS -->
+					<!-- Render attachments -->
 					{#if note.attachments && note.attachments.length > 0}
 						<div class="mt-2 flex flex-wrap gap-2">
 							{#each note.attachments as att}
-								<!-- IMAGE VERIFICATION -->
+								<!-- Verify image attachments -->
 								{#if att.mime_type.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(att.original_name)}
 									<a href={getAttachmentUrl(att)} target="_blank" rel="noopener noreferrer" class="block overflow-hidden rounded-md border border-surface-divider max-w-75">
 										<img src={getAttachmentUrl(att)} alt={att.original_name} class="h-auto w-full object-cover" />
@@ -394,11 +388,11 @@
 			{/each}
 		</div>
 
-		<!-- Input Field from STAGING AREA -->
+		<!-- Render the input field from the staging area -->
 		<div class="p-4 pt-0">
 			<div class="flex flex-col rounded-lg bg-surface-input border border-surface-divider focus-within:border-indigo-500">
 				
-				<!-- View of the file waiting room -->
+				<!-- Show files waiting to be attached -->
 				{#if pendingFiles.length > 0}
 					<div class="flex flex-wrap gap-2 border-b border-surface-divider p-3">
 						{#each pendingFiles as pFile}
@@ -412,12 +406,12 @@
 				{/if}
 
 				<div class="flex items-center">
-					<!-- Paperclip Button -->
+					<!-- Show the paperclip button -->
 					<button onclick={openFilePicker} class="pl-4 text-gray-400 hover:text-indigo-400 transition-colors" title="Attach file">
 						<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
 					</button>
 
-					<!-- listen for events on the clipboard: onpaste (text/paths) and onkeydown (native image reading on Linux) -->
+					<!-- Listen for clipboard events: onpaste for text and paths, and onkeydown for native Linux image reads -->
 					<textarea
 						bind:value={newNoteContent}
 						onkeydown={(e) => { handleKeydownPasteFallback(e); sendNote(e); }}

@@ -13,7 +13,7 @@ pub struct Note {
     pub attachments: Option<Vec<crate::attachments::Attachment>>,
 }
 
-// download all notes from a specific folder
+// Download all notes from a specific folder
 #[tauri::command]
 pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<Vec<Note>, String> {
     let db_guard = state.db.lock().await;
@@ -39,7 +39,7 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
 
     let mut notes = Vec::new();
 
-    // SLOW N+1
+    // Avoid the slow N+1 query pattern
     for record in notes_records {
         let atts = sqlx::query_as!(
             crate::attachments::Attachment,
@@ -73,7 +73,7 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
     Ok(notes)
 }
 
-// Add new note
+// Add a new note
 #[tauri::command]
 pub async fn create_note(
     folder_id: String,
@@ -144,7 +144,7 @@ pub async fn update_note(
     Ok(())
 }
 
-// Soft delete to trash
+// Soft-delete the note to the trash
 #[tauri::command]
 pub async fn soft_delete_note(id: String, state: State<'_, AppState>) -> Result<(), String> {
     let db_guard = state.db.lock().await;

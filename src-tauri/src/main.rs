@@ -17,7 +17,7 @@ mod notes;
 mod search;
 mod workspace;
 
-// app memory
+// Store application state
 pub struct AppState {
     pub db: TokioMutex<Option<SqlitePool>>,
     pub workspace_path: StdMutex<Option<String>>,
@@ -35,12 +35,12 @@ fn main() {
             let ws_guard = state.workspace_path.lock().unwrap();
 
             if let Some(ws) = ws_guard.as_ref() {
-                // instead of splitting it into host and path, simply take the entire raw URL
+                // Take the entire raw URL instead of splitting it into host and path
                 let uri_str = request.uri().to_string();
 
                 println!("[Accord Protocol] A request was received: {}", uri_str);
 
-                // search for keywords regardless of how tauri has structured the link
+                // Search for keywords regardless of how Tauri structured the link
                 let file_path = if let Some((_, local_part)) = uri_str.split_once("accord://local/")
                 {
                     let decoded = urlencoding::decode(local_part).unwrap_or_default();
@@ -51,7 +51,7 @@ fn main() {
                     let decoded = urlencoding::decode(link_part).unwrap_or_default();
                     PathBuf::from(decoded.into_owned())
                 } else if let Some((_, local_part)) = uri_str.split_once("/local/") {
-                    // fallback if tauri inserted, for example, “localhost” into the middle of the link
+                    // Use a fallback if Tauri inserted, for example, “localhost” into the link
                     let decoded = urlencoding::decode(local_part).unwrap_or_default();
                     Path::new(ws)
                         .join(constants::ATTACHMENTS_DIR)
@@ -61,9 +61,9 @@ fn main() {
                     return Response::builder().status(400).body(vec![]).unwrap();
                 };
 
-                println!("[Accord Protocol] Szukam pliku na dysku: {:?}", file_path);
+                println!("[Accord Protocol] Looking for the file on disk: {:?}", file_path);
 
-                // read the file and assign it the appropriate MIME type
+                // Read the file and assign it the appropriate MIME type
                 if let Ok(data) = fs::read(&file_path) {
                     let extension = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
                     let mime_type = match extension.to_lowercase().as_str() {

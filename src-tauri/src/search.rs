@@ -19,9 +19,8 @@ pub async fn search_notes(
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
-    // to avoid FTS5 syntax errors,
-    // add an asterisk at the end, which allows for partial-word searches
-    // also replace double quotation marks so as not to break the query
+    // Avoid FTS5 syntax errors by adding an asterisk for partial-word searches
+    // and replacing double quotation marks so they do not break the query
     let safe_query = format!("\"{}\"*", query.replace("\"", "\"\""));
 
     let results = sqlx::query_as!(

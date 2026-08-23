@@ -17,7 +17,7 @@
 	let folderTree = $state<TreeNode[]>([]);
 	let newFolderName = $state('');
 
-	// get folders from rust
+	// Load folders from Rust
 	async function loadFolders() {
 		try {
 			flatFolders = await invoke('get_folders');
@@ -27,8 +27,7 @@
 		}
 	}
 
-    // recursive function: turns a flat list into a tree
-    // by removing orphaned subfolders
+	// Build a tree from the flat list and remove orphaned subfolders
 	function buildTree(folders: Folder[], parentId: string | null): TreeNode[] {
 		return folders
 			.filter((f) => f.parent_id === parentId)
@@ -38,20 +37,20 @@
 			}));
 	}
 
-	// add a root folder from the bar at the bottom
+	// Add a root folder from the bottom bar
 	async function addRootFolder(event: KeyboardEvent) {
 		if (event.key === 'Enter' && newFolderName.trim() !== '') {
 			try {
 				await invoke('create_folder', { name: newFolderName.trim(), parentId: null });
-				newFolderName = ''; // clear input
-				await loadFolders(); // reload list
+				newFolderName = ''; // Clear the input
+				await loadFolders(); // Reload the list
 			} catch (e) {
 				console.error('Failed to create root folder', e);
 			}
 		}
 	}
 
-	// creating a subfolder using the native prompt for speed
+	// Create a subfolder using the native prompt for speed
 	async function addSubFolder(parentId: string) {
 		const name = prompt('Enter subchannel name:');
 		if (name && name.trim() !== '') {
@@ -64,12 +63,12 @@
 		}
 	}
 
-	// delete to trash
+	// Move a folder to the trash
 	async function deleteFolder(id: string, name: string) {
 		if (confirm(`Are you sure you want to delete #${name} and all its contents?`)) {
 			try {
 				await invoke('soft_delete_folder', { id });
-				// if deleted active folder, clear the state
+				// Clear the state when deleting the active folder
 				if (uiState.activeFolderId === id) {
 					uiState.activeFolderId = null;
 					uiState.activeFolderName = null;
@@ -86,11 +85,11 @@
 	});
 </script>
 
-<!-- RECURSIVE SNIPPET TO RENDER FOLDER TREE -->
+<!-- Render the folder tree recursively -->
 {#snippet folderNode(node: TreeNode, depth: number)}
-	<!-- render the folder itself, the indentation increases with each depth -->
+	<!-- Render the folder and increase indentation with each depth -->
 
-	<!-- clicking sets this folder as the active one globally -->
+	<!-- Set this folder as the active folder when clicked -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div 
@@ -103,14 +102,14 @@
 			<span class="truncate font-medium">{node.name}</span>
 		</div>
 		
-		<!-- action buttons (appear on mouse hover) -->
+		<!-- Show action buttons on mouse hover -->
 		<div class="hidden items-center space-x-1 group-hover:flex">
 			<button 
 				onclick={(e) => { e.stopPropagation(); addSubFolder(node.id); }} 
 				class="text-gray-400 transition-colors hover:text-green-400" 
 				title="Add subchannel"
 			>
-				<!-- plus icon -->
+				<!-- Show the plus icon -->
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
 			</button>
 			<button 
@@ -118,13 +117,13 @@
 				class="ml-1 text-gray-400 transition-colors hover:text-red-400" 
 				title="Delete channel"
 			>
-				<!-- trash icon -->
+				<!-- Show the trash icon -->
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
 			</button>
 		</div>
 	</div>
 
-	<!-- if the folder has subfolders call the snippet for each subfolder -->
+	<!-- Render the snippet for each subfolder -->
 	{#if node.children.length > 0}
 		{#each node.children as child}
 			{@render folderNode(child, depth + 1)}
@@ -138,7 +137,7 @@
 	</div>
 
 	<div class="flex-1 overflow-y-auto p-2">
-		<!-- start drawing the tree from depth 0 -->
+		<!-- Start drawing the tree at depth 0 -->
 		{#each folderTree as rootFolder}
 			{@render folderNode(rootFolder, 0)}
 		{/each}

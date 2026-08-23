@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
-// folder structure (database folders)
+// Define the database folder structure
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Folder {
     pub id: String,
@@ -11,13 +11,13 @@ pub struct Folder {
     pub name: String,
 }
 
-// select all folders not in the trash
+// Select all folders that are not in the trash
 #[tauri::command]
 pub async fn get_folders(state: State<'_, AppState>) -> Result<Vec<Folder>, String> {
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
-    // sort alphabetically
+    // Sort the folders alphabetically
     let folders = sqlx::query_as!(
         Folder,
         r#"
@@ -37,7 +37,7 @@ pub async fn get_folders(state: State<'_, AppState>) -> Result<Vec<Folder>, Stri
     Ok(folders)
 }
 
-// create a new folder with a secure UUID
+// Create a new folder with a secure UUID
 #[tauri::command]
 pub async fn create_folder(
     name: String,
@@ -59,7 +59,7 @@ pub async fn create_folder(
     .await
     .map_err(|e| e.to_string())?;
 
-    // return the created folder to the interface so that it is displayed immediately
+    // Return the created folder so the interface can display it immediately
     Ok(Folder {
         id,
         parent_id,

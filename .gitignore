@@ -1,5 +1,5 @@
 # =========================
-# Node.js & SvelteKit (Frontend)
+# Configure Node.js and SvelteKit (Frontend)
 # =========================
 node_modules/
 .svelte-kit/
@@ -8,13 +8,13 @@ dist/
 npm-debug.log*
 
 # =========================
-# Rust & Tauri (Backend)
+# Configure Rust and Tauri (Backend)
 # =========================
 src-tauri/target/
 # Note: Keep Cargo.lock and Cargo.toml tracked by Git
 
 # =========================
-# Database (sqlx) and environment variables
+# Exclude the database (sqlx) and environment variables
 # =========================
 src-tauri/.env
 src-tauri/dev.sqlite
@@ -29,7 +29,7 @@ src-tauri/dev.sqlite-shm
 *.sqlite-shm
 
 # =========================
-# OS & IDE (System i VS Code)
+# Configure the OS and IDE (System and VS Code)
 # =========================
 .DS_Store
 Thumbs.db
