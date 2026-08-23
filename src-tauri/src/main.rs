@@ -1,11 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use sqlx::SqlitePool;
-use std::fs;
-use std::path::{Path, PathBuf};
 use std::sync::Mutex as StdMutex;
-use tauri::http::Response;
-use tauri::Manager;
 use tokio::sync::Mutex as TokioMutex;
 
 mod attachments;
@@ -14,6 +10,7 @@ mod constants;
 mod db;
 mod folders;
 mod notes;
+mod protocol;
 mod search;
 mod workspace;
 
@@ -30,66 +27,7 @@ fn main() {
             db: TokioMutex::new(None),
             workspace_path: StdMutex::new(None),
         })
-        .register_uri_scheme_protocol("accord", move |app, request| {
-            let state = app.app_handle().state::<AppState>();
-            let ws_guard = state.workspace_path.lock().unwrap();
-
-            if let Some(ws) = ws_guard.as_ref() {
-                // Take the entire raw URL instead of splitting it into host and path
-                let uri_str = request.uri().to_string();
-
-                println!("[Accord Protocol] A request was received: {}", uri_str);
-
-                // Search for keywords regardless of how Tauri structured the link
-                let file_path = if let Some((_, local_part)) = uri_str.split_once("accord://local/")
-                {
-                    let decoded = urlencoding::decode(local_part).unwrap_or_default();
-                    Path::new(ws)
-                        .join(constants::ATTACHMENTS_DIR)
-                        .join(decoded.into_owned())
-                } else if let Some((_, link_part)) = uri_str.split_once("accord://link/") {
-                    let decoded = urlencoding::decode(link_part).unwrap_or_default();
-                    PathBuf::from(decoded.into_owned())
-                } else if let Some((_, local_part)) = uri_str.split_once("/local/") {
-                    // Use a fallback if Tauri inserted, for example, “localhost” into the link
-                    let decoded = urlencoding::decode(local_part).unwrap_or_default();
-                    Path::new(ws)
-                        .join(constants::ATTACHMENTS_DIR)
-                        .join(decoded.into_owned())
-                } else {
-                    println!("[Accord Protocol] Unrecognized URL format");
-                    return Response::builder().status(400).body(vec![]).unwrap();
-                };
-
-                println!("[Accord Protocol] Looking for the file on disk: {:?}", file_path);
-
-                // Read the file and assign it the appropriate MIME type
-                if let Ok(data) = fs::read(&file_path) {
-                    let extension = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                    let mime_type = match extension.to_lowercase().as_str() {
-                        "png" => "image/png",
-                        "jpg" | "jpeg" => "image/jpeg",
-                        "gif" => "image/gif",
-                        "webp" => "image/webp",
-                        "pdf" => "application/pdf",
-                        _ => "application/octet-stream",
-                    };
-
-                    println!("[Accord Protocol] Success! Sending as {}", mime_type);
-
-                    return Response::builder()
-                        .status(200)
-                        .header("Access-Control-Allow-Origin", "*")
-                        .header("Content-Type", mime_type)
-                        .body(data)
-                        .unwrap();
-                } else {
-                    println!("[Accord Protocol] ERROR: File not found on disk!");
-                }
-            }
-
-            Response::builder().status(404).body(vec![]).unwrap()
-        })
+        .register_uri_scheme_protocol("accord", protocol::handle_accord_protocol)
         .invoke_handler(tauri::generate_handler![
             workspace::get_workspace,
             workspace::set_workspace,

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/core';
 	import { open } from '@tauri-apps/plugin-dialog';
+	import { getCurrentWebview } from '@tauri-apps/api/webview';
+	import { onMount, onDestroy } from 'svelte';
 	import { uiState } from '$lib/state.svelte';
 
 	interface Attachment {
@@ -32,6 +34,11 @@
 	let notes = $state<Note[]>([]);
 	let newNoteContent = $state('');
 	let pendingFiles = $state<PendingFile[]>([]);
+
+	// True while an OS-level file drag is hovering over the window, used for
+	// a visual drop-zone highlight (there is no DOM dragover event to hook
+	// into here - see the onDragDropEvent listener below).
+	let isDraggingOver = $state(false);
 	
 	// Track the edit status
 	let editingId = $state<string | null>(null);
@@ -97,7 +104,7 @@
 				const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'image/png' });
 
 				pendingFiles = [...pendingFiles, {
-					id: Math.random().toString(),
+					id: crypto.randomUUID(),
 					name: `Screenshot_${new Date().getTime()}.png`,
 					type: 'blob',
 					mimeType: 'image/png',
@@ -126,7 +133,7 @@
 				const blob = item.getAsFile();
 				if (blob) {
 					pendingFiles = [...pendingFiles, {
-						id: Math.random().toString(),
+						id: crypto.randomUUID(),
 						name: `Screenshot_${new Date().getTime()}.png`,
 						type: 'blob',
 						mimeType: blob.type,
@@ -164,7 +171,7 @@
 					const name = decodedPath.split(/[/\\]/).pop() || 'Unknown';
 					
 					pendingFiles = [...pendingFiles, {
-						id: Math.random().toString(),
+						id: crypto.randomUUID(),
 						name: name,
 						type: 'path',
 						mimeType: 'application/octet-stream',
@@ -183,19 +190,65 @@
 		}
 	}
 
-	// Handle drag and drop
-	function handleDrop(e: DragEvent) {
-		e.preventDefault();
-		if (!e.dataTransfer) return;
-		
-		for (const file of e.dataTransfer.files) {
+	// Handle native OS-level drag & drop.
+	// Tauri v2 intercepts window drag-and-drop before it ever reaches the DOM
+	// (window-level `dragDropEnabled` defaults to true), so `ondrop`/`ondragover`
+	// on a <div> never fire with real files. Instead we listen to Tauri's own
+	// webview event, which also gives us real filesystem paths - letting the
+	// user pick COPY/MOVE/LINK exactly like the file picker does, instead of
+	// only ever being able to copy raw bytes.
+	let unlistenDrop: (() => void) | undefined;
+
+	onMount(() => {
+		(async () => {
+			unlistenDrop = await getCurrentWebview().onDragDropEvent((event) => {
+				if (event.payload.type === 'enter' || event.payload.type === 'over') {
+					isDraggingOver = true;
+				} else if (event.payload.type === 'drop') {
+					isDraggingOver = false;
+					handleNativeDrop(event.payload.paths);
+				} else if (event.payload.type === 'leave') {
+					isDraggingOver = false;
+				}
+			});
+		})();
+	});
+
+	onDestroy(() => {
+		unlistenDrop?.();
+	});
+
+	// Reusable COPY/MOVE/LINK chooser, replacing the native `prompt()` text box
+	// with an in-app dialog. `askOperation` resolves once the user picks a
+	// button or dismisses the dialog (Escape / backdrop / Cancel -> null).
+	let opDialog = $state<{ count: number; resolve: (op: 'COPY' | 'MOVE' | 'LINK' | null) => void } | null>(null);
+
+	function askOperation(count: number): Promise<'COPY' | 'MOVE' | 'LINK' | null> {
+		return new Promise((resolve) => {
+			opDialog = { count, resolve };
+		});
+	}
+
+	function chooseOperation(op: 'COPY' | 'MOVE' | 'LINK' | null) {
+		opDialog?.resolve(op);
+		opDialog = null;
+	}
+
+	async function handleNativeDrop(paths: string[]) {
+		if (!paths || paths.length === 0) return;
+
+		const operation = await askOperation(paths.length);
+		if (!operation) return;
+
+		for (const path of paths) {
+			const name = path.split(/[/\\]/).pop() || 'Unknown';
 			pendingFiles = [...pendingFiles, {
-				id: Math.random().toString(),
-				name: file.name,
-				type: 'blob',
-				mimeType: file.type || 'application/octet-stream',
-				data: file,
-				operation: 'COPY'
+				id: crypto.randomUUID(),
+				name,
+				type: 'path',
+				mimeType: 'application/octet-stream',
+				path,
+				operation
 			}];
 		}
 	}
@@ -205,22 +258,18 @@
 		try {
 			const selectedPath = await open({ multiple: false, title: 'Attach File' });
 			if (selectedPath) {
-				const op = prompt("Do you want to COPY, MOVE, or LINK the file?\nType: COPY, MOVE, or LINK", "COPY");
-				if (!op) return;
-				
-				const operation = op.toUpperCase();
-				
-				if (['COPY', 'MOVE', 'LINK'].includes(operation)) {
-					const name = typeof selectedPath === 'string' ? selectedPath.split(/[/\\]/).pop() : 'Unknown';
-					pendingFiles = [...pendingFiles, {
-						id: Math.random().toString(),
-						name: name || 'Unknown',
-						type: 'path',
-						mimeType: 'application/octet-stream',
-						path: selectedPath as string,
-						operation: operation as 'COPY' | 'MOVE' | 'LINK'
-					}];
-				}
+				const operation = await askOperation(1);
+				if (!operation) return;
+
+				const name = typeof selectedPath === 'string' ? selectedPath.split(/[/\\]/).pop() : 'Unknown';
+				pendingFiles = [...pendingFiles, {
+					id: crypto.randomUUID(),
+					name: name || 'Unknown',
+					type: 'path',
+					mimeType: 'application/octet-stream',
+					path: selectedPath as string,
+					operation
+				}];
 			}
 		} catch (e) {
 			console.error('Failed to select file', e);
@@ -332,10 +381,13 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div 
-	ondrop={handleDrop} 
-	ondragover={(e) => e.preventDefault()}
-	class="flex h-full flex-col bg-surface-chat"
+	class="relative flex h-full flex-col bg-surface-chat transition-colors {isDraggingOver ? 'ring-2 ring-inset ring-indigo-500' : ''}"
 >
+	{#if isDraggingOver}
+		<div class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-indigo-500/10">
+			<span class="rounded bg-surface-base px-4 py-2 text-sm font-medium text-indigo-400 shadow">Drop file to attach</span>
+		</div>
+	{/if}
 	{#if uiState.activeFolderId}
 		<div class="flex h-12 items-center border-b border-surface-divider px-4 font-bold shadow-sm">
 			<span class="mr-2 text-xl text-gray-500">#</span>
@@ -431,3 +483,54 @@
 		</div>
 	{/if}
 </div>
+
+{#if opDialog}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+		onclick={() => chooseOperation(null)}
+		onkeydown={(e) => { if (e.key === 'Escape') chooseOperation(null); }}
+	>
+		<div
+			class="w-80 rounded-lg border border-surface-divider bg-surface-sidebar p-4 shadow-xl"
+			onclick={(e) => e.stopPropagation()}
+		>
+			<h3 class="mb-1 text-sm font-semibold text-white">
+				Attach {opDialog.count === 1 ? 'file' : `${opDialog.count} files`}
+			</h3>
+			<p class="mb-4 text-xs text-gray-400">Choose how the file should be attached.</p>
+
+			<div class="space-y-2">
+				<button
+					onclick={() => chooseOperation('COPY')}
+					class="w-full rounded-md bg-surface-input px-3 py-2 text-left text-sm text-gray-200 transition-colors hover:bg-surface-active hover:text-white"
+				>
+					<span class="block font-medium">Copy</span>
+					<span class="block text-xs text-gray-400">Keep the original, store a copy in the workspace</span>
+				</button>
+				<button
+					onclick={() => chooseOperation('MOVE')}
+					class="w-full rounded-md bg-surface-input px-3 py-2 text-left text-sm text-gray-200 transition-colors hover:bg-surface-active hover:text-white"
+				>
+					<span class="block font-medium">Move</span>
+					<span class="block text-xs text-gray-400">Move the original file into the workspace</span>
+				</button>
+				<button
+					onclick={() => chooseOperation('LINK')}
+					class="w-full rounded-md bg-surface-input px-3 py-2 text-left text-sm text-gray-200 transition-colors hover:bg-surface-active hover:text-white"
+				>
+					<span class="block font-medium">Link</span>
+					<span class="block text-xs text-gray-400">Reference the file in place, don't copy it</span>
+				</button>
+			</div>
+
+			<button
+				onclick={() => chooseOperation(null)}
+				class="mt-3 w-full rounded-md px-3 py-1.5 text-center text-xs text-gray-400 hover:text-gray-200"
+			>
+				Cancel
+			</button>
+		</div>
+	</div>
+{/if}
