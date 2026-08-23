@@ -19,9 +19,8 @@
 		attachments: Attachment[] | null;
 	}
 
-	// Struktura do "poczekalni" przed wysłaniem
 	interface PendingFile {
-		id: string; // tymczasowe
+		id: string;
 		name: string;
 		type: 'blob' | 'path';
 		mimeType: string;
@@ -32,7 +31,7 @@
 
 	let notes = $state<Note[]>([]);
 	let newNoteContent = $state('');
-	let pendingFiles = $state<PendingFile[]>([]); // Staging area!
+	let pendingFiles = $state<PendingFile[]>([]);
 	
 	// edit status
 	let editingId = $state<string | null>(null);
@@ -51,7 +50,7 @@
 		if (uiState.activeFolderId) {
 			loadNotes(uiState.activeFolderId);
 			editingId = null;
-			pendingFiles = []; // Czyścimy kolejkę przy zmianie kanału
+			pendingFiles = [];
 		}
 	});
 
@@ -80,13 +79,13 @@
 		}
 	}
 
-	// OBEJŚCIE DLA LINUXA: WebKitGTK nie zawsze wystawia obrazek (np. zrzut
-	// ekranu) przez e.clipboardData.items, mimo że fizycznie jest w schowku
-	// systemowym. Dlatego przy Ctrl+V pytamy najpierw backend (arboard/GTK)
-	// wprost o zawartość schowka. Jeśli backend zwróci obrazek - wygrywa on
-	// i blokujemy domyślny "paste". Jeśli nie (bo w schowku jest np. tekst
-	// albo ścieżka pliku skopiowana z eksploratora) - zwykły handlePaste
-	// poniżej obsłuży to tak jak dotychczas.
+	// WORKAROUND FOR LINUX: WebKitGTK does not always return an image (e.g., a screenshot
+    //) via e.clipboardData.items, even though it is physically present in the
+    // system clipboard. Therefore, when Ctrl+V is pressed, first ask the backend (arboard/GTK)
+	// directly for the clipboard’s contents. If the backend returns an image, it takes precedence
+    // and block the default “paste” action. If not (because the clipboard contains, for example, text
+    // or a file path copied from File Explorer), the regular `handlePaste`
+    // below will handle it as before.
 	async function handleKeydownPasteFallback(e: KeyboardEvent) {
 		if (!((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v')) return;
 
@@ -110,21 +109,21 @@
 					operation: 'COPY'
 				}];
 			}
-			// jeśli base64Png === null, nic nie robimy - event "paste" i tak
-			// zaraz odpali się normalnie i trafi do handlePaste niżej
+			// if base64Png === null, do nothing — the “paste” event will
+            // still fire normally and be handled by handlePaste below
 		} catch (err) {
 			console.error('Nie udało się odczytać schowka natywnie:', err);
-			// w razie błędu po prostu pozwalamy zadziałać zwykłemu handlePaste
+			// if an error occurs, simply let the regular handlePaste function run
 		}
 	}
 
-	// OBSŁUGA SCHOWKA (CTRL+V) - Wersja Ostateczna (Kuloodporna)
+	// CLIPBOARD SUPPORT (CTRL+V)
 	function handlePaste(e: ClipboardEvent) {
 		if (!e.clipboardData) return;
 		let handled = false;
 
-		// 1. Sprawdzamy czy w schowku jest fizyczny obrazek (Narzędzie wycinania)
-		// Używamy Array.from, bo WebKit na Linuxie czasem źle iteruje po .items
+		// check if there is a physical image in the clipboard (Snipping Tool)
+        // use Array.from because WebKit on Linux sometimes iterates incorrectly over .items
 		const items = Array.from(e.clipboardData.items || []);
 		
 		for (const item of items) {
@@ -144,26 +143,28 @@
 			}
 		}
 
-		// 2. Jeśli to nie zrzut ekranu, próbujemy przeczytać to jako tekst (Eksplorator plików)
+		// if it's not a screenshot, try to read it as text (File Explorer)
 		if (!handled) {
 			const plainText = e.clipboardData.getData('text/plain') || '';
 			const uriList = e.clipboardData.getData('text/uri-list') || '';
 			
-			// Łączymy wszystkie dane, żeby nic nam nie uciekło
+			// combine all the data so we don't miss anything
 			const combinedText = `${plainText}\n${uriList}`;
 			
-			// Rozbijamy na linijki i czyścimy każdą z osobna
+			// split it into lines and clean each one individually
 			const lines = combinedText.split(/[\r\n]+/).map(line => line.trim()).filter(line => line.length > 0);
 
 			for (let line of lines) {
-				// Agresywne czyszczenie z cudzysłowów, które Linux lubi dodawać
+				// gggressively remove the quotation marks that Linux tends to add
 				line = line.replace(/^['"]|['"]$/g, '');
 				
-				// Sprawdzamy, czy przypomina ścieżkę systemową lub URL pliku
+				// check if it resembles a system path or a file URL
 				if (line.startsWith('file://') || line.startsWith('/')) {
 					
 					let decodedPath = line.replace(/^file:\/\//i, '');
-					try { decodedPath = decodeURIComponent(decodedPath); } catch(err) {}
+					try { 
+						decodedPath = decodeURIComponent(decodedPath); 
+					} catch(err) {}
 					
 					const name = decodedPath.split(/[/\\]/).pop() || 'Unknown';
 					
@@ -180,15 +181,15 @@
 			}
 		}
 
-		// 3. BLOKADA: Jeśli złapaliśmy plik lub obrazek, stanowczo zakazujemy
-		// przeglądarce wklejania tych danych jako tekst do <textarea>!
+		// if captured a file or image, strictly prohibit
+        // the browser from pasting this data as text into <textarea>
 		if (handled) {
 			e.preventDefault();
 			e.stopPropagation();
 		}
 	}
 
-	// OBSŁUGA DRAG & DROP (Upuszczanie plików)
+	// DRAG & DROP
 	function handleDrop(e: DragEvent) {
 		e.preventDefault();
 		if (!e.dataTransfer) return;
@@ -205,7 +206,7 @@
 		}
 	}
 
-	// OBSŁUGA DIALOGU (Spinacz - Pliki z dysku)
+	// DIALOG HANDLING (Clipboard - Files from Disk)
 	async function openFilePicker() {
 		try {
 			const selectedPath = await open({ multiple: false, title: 'Attach File' });
@@ -240,23 +241,22 @@
 		if (event.key === 'Enter' && !event.shiftKey) {
 			event.preventDefault();
 			
-			// Blokada przed pustym strzałem
 			if (newNoteContent.trim() === '' && pendingFiles.length === 0) return;
 
 			try {
-				// 1. Tworzymy Notatkę!
+				// create a Note
 				const note: Note = await invoke('create_note', { 
 					folderId: uiState.activeFolderId, 
 					content: newNoteContent.trim() 
 				});
 				
-				// 2. Ładujemy załączniki do nowo utworzonej notatki!
+				// upload attachments to the newly created note
 				for (const file of pendingFiles) {
 					if (file.type === 'blob' && file.data) {
 						const buffer = await file.data.arrayBuffer();
 						await invoke('attach_blob', { 
 							noteId: note.id, 
-							// ZMIANA: Przekazujemy Uint8Array w całości zamiast rozbijać go na milion cyfr do Array!
+							// pass the entire Uint8Array instead of breaking it down into a million digits and putting them into an array
 							bytes: new Uint8Array(buffer), 
 							originalName: file.name, 
 							mimeType: file.mimeType 
@@ -275,7 +275,7 @@
 					}
 				}
 
-				// 3. Czyścimy
+				// clean up the input and pending files, then reload notes
 				newNoteContent = '';
 				pendingFiles = [];
 				await loadNotes(uiState.activeFolderId as string);
@@ -286,9 +286,9 @@
 		}
 	}
 
-	// Funkcja pomocnicza generująca URL naszego protokołu accord://
+	// helper function that generates URLs for our accord:// protocol
 	function getAttachmentUrl(att: Attachment) {
-		// Używamy encodeURIComponent, by bezpiecznie przekazać np. spacje z nazwy pliku
+		// use `encodeURIComponent` to safely pass, for example, spaces in a filename
 		if (att.operation_type === 'LINK') {
 			return `accord://link/${encodeURIComponent(att.local_path)}`;
 		}
@@ -296,7 +296,6 @@
 		return `accord://local/${encodeURIComponent(att.local_path)}`;
 	}
 
-	// (Reszta standardowych funkcji: deleteNote, startEdit, cancelEdit, saveEdit bez zmian...)
 	async function deleteNote(id: string) {
 		if (confirm('Are you sure you want to delete this note?')) {
 			try {
@@ -337,7 +336,6 @@
 	}
 </script>
 
-<!-- Kontener musi wyłapywać zdarzenia Drag&Drop -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div 
 	ondrop={handleDrop} 
@@ -356,7 +354,7 @@
 					<div class="mb-1 flex items-center justify-between">
 						<span class="text-xs font-medium text-gray-500">{note.created_at}</span>
 						
-						<!-- Kontrolki Edycji -->
+						<!-- Editing Controls -->
 						<div class="absolute -top-3 right-4 hidden space-x-2 rounded-md border border-surface-divider bg-surface-chat px-2 py-1 shadow-sm group-hover:flex">
 							<button onclick={() => startEdit(note)} class="text-gray-400 hover:text-indigo-400" title="Edit">
 								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
@@ -373,11 +371,11 @@
 						<p class="whitespace-pre-wrap text-sm text-gray-200">{note.content}</p>
 					{/if}
 
-					<!-- RENDEROWANIE ZAŁĄCZNIKÓW! -->
+					<!-- RENDERING ATTACHMENTS -->
 					{#if note.attachments && note.attachments.length > 0}
 						<div class="mt-2 flex flex-wrap gap-2">
 							{#each note.attachments as att}
-								<!-- NIEZAWODNE SPRAWDZANIE OBRAZKA: -->
+								<!-- IMAGE VERIFICATION -->
 								{#if att.mime_type.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(att.original_name)}
 									<a href={getAttachmentUrl(att)} target="_blank" rel="noopener noreferrer" class="block overflow-hidden rounded-md border border-surface-divider max-w-75">
 										<img src={getAttachmentUrl(att)} alt={att.original_name} class="h-auto w-full object-cover" />
@@ -396,11 +394,11 @@
 			{/each}
 		</div>
 
-		<!-- Pole Inputu ze STAGING AREA -->
+		<!-- Input Field from STAGING AREA -->
 		<div class="p-4 pt-0">
 			<div class="flex flex-col rounded-lg bg-surface-input border border-surface-divider focus-within:border-indigo-500">
 				
-				<!-- Widok poczekalni na pliki -->
+				<!-- View of the file waiting room -->
 				{#if pendingFiles.length > 0}
 					<div class="flex flex-wrap gap-2 border-b border-surface-divider p-3">
 						{#each pendingFiles as pFile}
@@ -414,12 +412,12 @@
 				{/if}
 
 				<div class="flex items-center">
-					<!-- Przycisk Spinacza -->
+					<!-- Paperclip Button -->
 					<button onclick={openFilePicker} class="pl-4 text-gray-400 hover:text-indigo-400 transition-colors" title="Attach file">
 						<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
 					</button>
 
-					<!-- Nasłuchujemy schowka na onpaste (tekst/ścieżki) i onkeydown (natywny odczyt obrazka na Linuksie)! -->
+					<!-- listen for events on the clipboard: onpaste (text/paths) and onkeydown (native image reading on Linux) -->
 					<textarea
 						bind:value={newNoteContent}
 						onkeydown={(e) => { handleKeydownPasteFallback(e); sendNote(e); }}

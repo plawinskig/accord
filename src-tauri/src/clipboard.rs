@@ -16,8 +16,8 @@ pub fn read_clipboard_image() -> Result<Option<String>, String> {
         Clipboard::new().map_err(|e| format!("Nie udało się otworzyć schowka: {e}"))?;
 
     let img = match clipboard.get_image() {
-        Ok(img) => img,
-        Err(_) => return Ok(None),
+        Ok(img) => img,            // handleKeydownPasteFallback
+        Err(_) => return Ok(None), // handlePaste
     };
 
     let width = img.width as u32;
