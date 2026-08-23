@@ -21,6 +21,27 @@
       },
       "isBackground": true,
       "problemMatcher": []
+    },
+    {
+      "label": "Cargo Format",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "fmt"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/src-tauri"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
     }
   ]
 }
