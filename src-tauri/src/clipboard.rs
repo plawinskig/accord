@@ -13,7 +13,7 @@ use std::io::Cursor;
 #[tauri::command]
 pub fn read_clipboard_image() -> Result<Option<String>, String> {
     let mut clipboard =
-        Clipboard::new().map_err(|e| format!("Nie udało się otworzyć schowka: {e}"))?;
+        Clipboard::new().map_err(|e| format!("Failed to open the clipboard: {e}"))?;
 
     let img = match clipboard.get_image() {
         Ok(img) => img,            // handleKeydownPasteFallback
@@ -26,12 +26,12 @@ pub fn read_clipboard_image() -> Result<Option<String>, String> {
     // arboard returns raw RGBA8 pixels; encode them into a PNG in memory
     let buffer: ImageBuffer<Rgba<u8>, Vec<u8>> =
         ImageBuffer::from_raw(width, height, img.bytes.into_owned())
-            .ok_or("Nieprawidłowe dane obrazu ze schowka")?;
+            .ok_or("Invalid image data from the clipboard")?;
 
     let mut png_bytes: Vec<u8> = Vec::new();
     buffer
         .write_to(&mut Cursor::new(&mut png_bytes), image::ImageFormat::Png)
-        .map_err(|e| format!("Nie udało się zakodować PNG: {e}"))?;
+        .map_err(|e| format!("Failed to encode PNG: {e}"))?;
 
     Ok(Some(general_purpose::STANDARD.encode(png_bytes)))
 }

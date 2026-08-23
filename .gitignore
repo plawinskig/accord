@@ -11,16 +11,16 @@ npm-debug.log*
 # Rust & Tauri (Backend)
 # =========================
 src-tauri/target/
-# Uwaga: Pliki Cargo.lock oraz Cargo.toml zostawiamy do śledzenia przez Gita!
+# Note: Keep Cargo.lock and Cargo.toml tracked by Git
 
 # =========================
-# Baza Danych (sqlx) i Zmienne Środowiskowe
+# Database (sqlx) and environment variables
 # =========================
 src-tauri/.env
 src-tauri/dev.sqlite
 src-tauri/dev.sqlite-wal
 src-tauri/dev.sqlite-shm
-# (Folder src-tauri/.sqlx, który powstanie później przy "offline mode", BĘDZIE śledzony)
+# (The src-tauri/.sqlx folder created later in "offline mode" WILL be tracked)
 
 # Zabezpieczenie przed przypadkowym dodaniem produkcyjnych baz danych
 *.db

@@ -140,7 +140,7 @@ pub async fn attach_file_move(
         .join(ATTACHMENTS_DIR)
         .join(&new_file_name);
 
-    // Fallback dla systemów Windows (gdy przenosimy plik między partycjami C: -> D:)
+    // Fallback for Windows systems when moving a file between C: and D: partitions
     if fs::rename(&source_path, &target_path).is_err() {
         fs::copy(&source_path, &target_path).map_err(|e| format!("Move failed: {}", e))?;
 

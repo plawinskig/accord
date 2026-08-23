@@ -112,7 +112,7 @@
 			// if base64Png === null, do nothing — the “paste” event will
             // still fire normally and be handled by handlePaste below
 		} catch (err) {
-			console.error('Nie udało się odczytać schowka natywnie:', err);
+			console.error('Failed to read the native clipboard:', err);
 			// if an error occurs, simply let the regular handlePaste function run
 		}
 	}

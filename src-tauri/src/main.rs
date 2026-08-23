@@ -57,7 +57,7 @@ fn main() {
                         .join(constants::ATTACHMENTS_DIR)
                         .join(decoded.into_owned())
                 } else {
-                    println!("[Accord Protocol] Nierozpoznany format URL!");
+                    println!("[Accord Protocol] Unrecognized URL format");
                     return Response::builder().status(400).body(vec![]).unwrap();
                 };
 
@@ -75,7 +75,7 @@ fn main() {
                         _ => "application/octet-stream",
                     };
 
-                    println!("[Accord Protocol] Sukces! Wysyłam jako {}", mime_type);
+                    println!("[Accord Protocol] Success! Sending as {}", mime_type);
 
                     return Response::builder()
                         .status(200)
@@ -84,7 +84,7 @@ fn main() {
                         .body(data)
                         .unwrap();
                 } else {
-                    println!("[Accord Protocol] BŁĄD: Nie znaleziono pliku na dysku!");
+                    println!("[Accord Protocol] ERROR: File not found on disk!");
                 }
             }
 
