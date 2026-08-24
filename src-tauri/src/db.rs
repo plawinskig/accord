@@ -14,10 +14,15 @@ pub async fn init_db(workspace_path: &str) -> Result<SqlitePool, String> {
     let db_url = format!("sqlite://{}", db_path.to_string_lossy());
 
     // Set options to create a missing file and use WAL mode for security
+    // Enable foreign key enforcement. SQLite has this OFF by default per
+    // connection - without it, every `ON DELETE CASCADE` in the schema
+    // (attachments -> notes, and now note_tags -> notes/tags) is silently
+    // ignored and orphaned rows are left behind on hard delete.
     let options = SqliteConnectOptions::from_str(&db_url)
         .map_err(|e| e.to_string())?
         .create_if_missing(true)
-        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal);
+        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+        .foreign_keys(true);
 
     let pool = SqlitePoolOptions::new()
         .connect_with(options)
