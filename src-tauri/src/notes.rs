@@ -151,12 +151,7 @@ pub async fn create_note(
     .await
     .map_err(|e| e.to_string())?;
 
-    let detected_tags = crate::tags::parse_tags_from_content(&content);
-    if !detected_tags.is_empty() {
-        crate::tags::ensure_tags_for_note(pool, &id, &detected_tags)
-            .await
-            .map_err(|e| e.to_string())?;
-    }
+    let detected_tags = update_tags(content, pool, &id).await?;
 
     let record = sqlx::query!(
         r#"
@@ -210,12 +205,7 @@ pub async fn update_note(
     .await
     .map_err(|e| e.to_string())?;
 
-    let detected_tags = crate::tags::parse_tags_from_content(&content);
-    if !detected_tags.is_empty() {
-        crate::tags::ensure_tags_for_note(pool, &id, &detected_tags)
-            .await
-            .map_err(|e| e.to_string())?;
-    }
+    _ = update_tags(content, pool, &id).await?;
 
     Ok(())
 }
@@ -232,4 +222,20 @@ pub async fn soft_delete_note(id: String, state: State<'_, AppState>) -> Result<
         .map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+async fn update_tags(
+    content: String,
+    pool: &sqlx::SqlitePool,
+    note_id: &str,
+) -> Result<Vec<String>, String> {
+    let detected_tags = crate::tags::parse_tags_from_content(&content);
+
+    if !detected_tags.is_empty() {
+        crate::tags::ensure_tags_for_note(pool, note_id, &detected_tags)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(detected_tags)
 }
