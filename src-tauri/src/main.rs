@@ -12,6 +12,7 @@ mod folders;
 mod notes;
 mod protocol;
 mod search;
+mod tags;
 mod workspace;
 
 // Store application state
@@ -44,7 +45,12 @@ fn main() {
             attachments::attach_file_move,
             attachments::attach_file_link,
             attachments::attach_blob,
-            clipboard::read_clipboard_image
+            clipboard::read_clipboard_image,
+            tags::get_all_tags,
+            tags::attach_tag,
+            tags::detach_tag,
+            tags::rename_tag,
+            tags::delete_tag
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
