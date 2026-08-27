@@ -25,6 +25,12 @@
       "color": "warning"
     },
     {
+      "label": "Check",
+      "task": "Cargo Check",
+      "tooltip": "Sprawdza kod Rust (Compiler)",
+      "color": "warning"
+    },
+    {
       "label": "Clippy",
       "task": "Cargo Clippy",
       "tooltip": "Sprawdza kod Rust (Linter)",
