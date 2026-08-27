@@ -11,10 +11,34 @@
       "color": "warning"
     },
     {
-      "label": "Cargo Format",
+      "label": "Format",
       "task": "Cargo Format",
       "tooltip": "Uruchamia cargo format dla projektu Rust",
       "color": "warning"
+    },
+    {
+      "label": "Clippy",
+      "task": "Cargo Clippy",
+      "tooltip": "Sprawdza kod Rust (Linter)",
+      "color": "warning"
+    },
+    {
+      "label": "DB Create",
+      "task": "SQLx Create DB",
+      "tooltip": "Tworzy lokalną bazę danych SQLite",
+      "color": "warning"
+    },
+    {
+      "label": "DB Migrate",
+      "task": "SQLx Migrate",
+      "tooltip": "Uruchamia migracje bazy danych",
+      "color": "warning"
+    },
+    {
+      "label": "DB Prepare",
+      "task": "SQLx Prepare",
+      "tooltip": "Zapisuje metadane SQLx offline (wymaga działającej bazy)",
+      "color": "error"
     }
-  ],
+  ]
 }
