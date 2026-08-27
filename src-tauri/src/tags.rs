@@ -12,12 +12,18 @@ pub struct Tag {
     pub name: String,
 }
 
-// Matches a `#` followed by one or more Unicode letters/digits/underscores,
-// so e.g. #ważne (Polish diacritics) and #project_2 both match. \p{L}/\p{N}
-// require the `unicode` feature of the `regex` crate, which is on by default.
+// Matches the configured trigger (constants::TAG_TRIGGER, e.g. "::")
+// followed by one or more Unicode letters/digits/underscores, so e.g.
+// ::ważne (Polish diacritics) and ::project_2 both match. \p{L}/\p{N}
+// require the `unicode` feature of the `regex` crate, which is on by
+// default. The trigger is escaped in case it's ever changed to a character
+// that's special in regex syntax (e.g. "." or "$").
 fn tag_token_regex() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| Regex::new(r"#([\p{L}\p{N}_]+)").unwrap())
+    RE.get_or_init(|| {
+        let trigger = regex::escape(crate::constants::TAG_TRIGGER);
+        Regex::new(&format!(r"{trigger}([\p{{L}}\p{{N}}_]+)")).unwrap()
+    })
 }
 
 // Full-match validator used for tags coming from the manual tag-picker menu,
@@ -29,7 +35,12 @@ fn tag_name_regex() -> &'static Regex {
     RE.get_or_init(|| Regex::new(r"^[\p{L}\p{N}_]+$").unwrap())
 }
 
-/// Extracts unique `#tag` tokens from note content, normalized to lowercase.
+/// Extracts unique `#tag` tokens from note content, normalized to lowercase,
+/// in the order they first appear (so a note typed as "::work ::urgent"
+/// yields ["work", "urgent"], not an arbitrary hash-set order - that matters
+/// once these are rendered as pills in the UI). Only the accepted, unique
+/// name is cloned (once, into `seen`); rejected duplicates cost no clone.
+///
 /// Rust's `to_lowercase` is Unicode-aware (unlike SQLite's built-in NOCASE
 /// collation, which is ASCII-only), so this is the single source of case
 /// normalization - the `tags.name` column always stores the lowercase form.
@@ -38,7 +49,14 @@ pub fn parse_tags_from_content(content: &str) -> Vec<String> {
     tag_token_regex()
         .captures_iter(content)
         .filter_map(|caps| caps.get(1).map(|m| m.as_str().to_lowercase()))
-        .filter(|name| seen.insert(name.clone()))
+        .filter(|name| {
+            if seen.contains(name) {
+                false
+            } else {
+                seen.insert(name.clone());
+                true
+            }
+        })
         .collect()
 }
 
@@ -88,6 +106,25 @@ pub async fn ensure_tags_for_note(
         .await?;
     }
     Ok(())
+}
+
+/// Parses `#tag` tokens out of note content and ensures each detected tag
+/// is attached to `note_id` (creating tags that don't exist yet). This is
+/// the single place where "detect tags in content, then attach them" lives -
+/// both `notes::create_note` and `notes::update_note` call this instead of
+/// each re-implementing the parse-then-ensure sequence.
+pub async fn sync_tags_from_content(
+    pool: &sqlx::SqlitePool,
+    note_id: &str,
+    content: &str,
+) -> Result<Vec<String>, sqlx::Error> {
+    let detected_tags = parse_tags_from_content(content);
+
+    if !detected_tags.is_empty() {
+        ensure_tags_for_note(pool, note_id, &detected_tags).await?;
+    }
+
+    Ok(detected_tags)
 }
 
 /// Returns every tag in the workspace, for the global list in the right
@@ -205,7 +242,7 @@ mod tests {
     #[test]
     fn extracts_simple_tags() {
         assert_eq!(
-            parse_tags_from_content("Oto projekt #ważne i #todo"),
+            parse_tags_from_content("Oto projekt ::ważne i ::todo"),
             vec!["ważne".to_string(), "todo".to_string()]
         );
     }
@@ -213,16 +250,21 @@ mod tests {
     #[test]
     fn deduplicates_and_lowercases() {
         assert_eq!(
-            parse_tags_from_content("#Ważne coś tam #WAŻNE znowu"),
+            parse_tags_from_content("::Ważne coś tam ::WAŻNE znowu"),
             vec!["ważne".to_string()]
         );
     }
 
     #[test]
-    fn ignores_bare_hash() {
+    fn ignores_bare_trigger() {
+        assert_eq!(parse_tags_from_content(":: 5 zł"), Vec::<String>::new());
+    }
+
+    #[test]
+    fn preserves_first_appearance_order_with_duplicates_later() {
         assert_eq!(
-            parse_tags_from_content("cena to # 5 zł"),
-            Vec::<String>::new()
+            parse_tags_from_content("::work ::urgent ::work znowu"),
+            vec!["work".to_string(), "urgent".to_string()]
         );
     }
 
