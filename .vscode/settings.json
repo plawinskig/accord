@@ -36,12 +36,12 @@
       "tooltip": "Sprawdza kod Rust (Linter)",
       "color": "warning"
     },
-    {
-      "label": "DB Create",
-      "task": "SQLx Create DB",
-      "tooltip": "Tworzy lokalną bazę danych SQLite",
-      "color": "warning"
-    },
+    // {
+    //   "label": "DB Create",
+    //   "task": "SQLx Create DB",
+    //   "tooltip": "Tworzy lokalną bazę danych SQLite",
+    //   "color": "warning"
+    // },
     {
       "label": "DB Migrate",
       "task": "SQLx Migrate",
