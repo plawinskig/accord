@@ -13,6 +13,7 @@ mod notes;
 mod protocol;
 mod search;
 mod tags;
+mod trash;
 mod workspace;
 
 // Store application state
@@ -50,7 +51,10 @@ fn main() {
             tags::attach_tag,
             tags::detach_tag,
             tags::rename_tag,
-            tags::delete_tag
+            tags::delete_tag,
+            trash::get_trash,
+            trash::restore_item,
+            trash::empty_trash,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
