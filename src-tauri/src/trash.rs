@@ -69,10 +69,23 @@ pub async fn restore_item(
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
     if item_type == "folder" {
-        sqlx::query!("UPDATE folders SET is_deleted = 0 WHERE id = ?", id)
-            .execute(pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        sqlx::query!(
+            r#"
+            UPDATE folders 
+            SET is_deleted = 0, 
+                parent_id = CASE 
+                    WHEN parent_id IS NOT NULL 
+                    AND (SELECT is_deleted FROM folders p WHERE p.id = folders.parent_id) = 1 
+                    THEN NULL 
+                    ELSE parent_id 
+                END 
+            WHERE id = ?
+            "#,
+            id
+        )
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
     } else {
         sqlx::query!("UPDATE notes SET is_deleted = 0 WHERE id = ?", id)
             .execute(pool)
