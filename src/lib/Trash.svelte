@@ -43,10 +43,12 @@
 		{:else}
 			<div class="space-y-2">
 				{#each items as item}
-					<div class="flex items-center justify-between rounded bg-surface-active px-4 py-3 border border-surface-divider">
-						<div>
-							<span class="text-xs font-bold uppercase text-gray-500">{item.item_type}</span>
-							<p class="mt-1 text-sm text-gray-200">{item.name}</p>
+                    <div class="flex items-center justify-between rounded bg-surface-active px-4 py-3 border border-surface-divider">
+						<div class="flex items-center gap-3">
+							<span class="rounded bg-surface-input px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+								{item.item_type}
+							</span>
+							<p class="text-sm text-gray-200">{item.name}</p>
 						</div>
 						<button onclick={() => restoreItem(item.id, item.item_type)} class="rounded bg-surface-input px-3 py-1.5 text-sm text-indigo-400 hover:bg-surface-hover">Restore</button>
 					</div>
