@@ -5,6 +5,8 @@
 	import Sidebar from '$lib/Sidebar.svelte';
 	import Chat from '$lib/Chat.svelte';
 	import RightSidebar from '$lib/RightSidebar.svelte';
+	import Trash from '$lib/Trash.svelte';
+	import { uiState } from '$lib/state.svelte';
 
 	let workspace: string | null = null;
 	let loading = true;
@@ -86,7 +88,11 @@
 			
 			<!-- Render the middle chat column -->
 			<div class="flex flex-1 flex-col">
-				<Chat />
+				{#if uiState.isTrashOpen}
+					<Trash />
+				{:else}
+					<Chat />
+				{/if}
 			</div>
 
 			<!-- Render the right tags and search column -->
