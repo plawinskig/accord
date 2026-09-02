@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/core';
-	import { open } from '@tauri-apps/plugin-dialog';
+	import { open, save } from '@tauri-apps/plugin-dialog';
 	import { getCurrentWebview } from '@tauri-apps/api/webview';
 	import { onMount, onDestroy } from 'svelte';
 	import { uiState } from '$lib/state.svelte';
@@ -438,6 +438,22 @@
 			cancelEdit();
 		}
 	}
+
+	async function exportChannel() {
+		try {
+			const filePath = await save({
+				filters: [{ name: 'Markdown', extensions: ['md'] }],
+				defaultPath: `${uiState.activeFolderName}.md`
+			});
+			if (filePath) {
+				await invoke('export_folder', { folderId: uiState.activeFolderId, destPath: filePath });
+				alert('Channel exported successfully!');
+			}
+		} catch (e) {
+			console.error(e);
+			alert('Export failed.');
+		}
+	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -450,9 +466,15 @@
 		</div>
 	{/if}
 	{#if uiState.activeFolderId}
-		<div class="flex h-12 items-center border-b border-surface-divider px-4 font-bold shadow-sm">
-			<span class="mr-2 text-xl text-gray-500">#</span>
-			<span class="text-white">{uiState.activeFolderName}</span>
+		<div class="flex h-12 items-center justify-between border-b border-surface-divider px-4 font-bold shadow-sm">
+			<div class="flex items-center">
+				<span class="mr-2 text-xl text-gray-500">#</span>
+				<span class="text-white">{uiState.activeFolderName}</span>
+			</div>
+			<button onclick={exportChannel} class="flex items-center gap-1 rounded px-2 py-1 text-xs text-gray-400 transition-colors hover:bg-surface-active hover:text-indigo-400" title="Export Channel to Markdown">
+				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+				Export
+			</button>
 		</div>
 
 		<div bind:this={chatContainer} class="flex-1 space-y-4 overflow-y-auto p-4">
