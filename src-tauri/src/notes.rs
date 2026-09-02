@@ -26,7 +26,9 @@ fn split_tags(raw: Option<&str>) -> Vec<String> {
 }
 
 // Download all notes from a specific folder, along with their attachments
-// and tags, in a single query.
+// and tags, in a single query. `tag_id` is an optional filter: when Some,
+// only notes carrying that tag are returned; when None, every note in the
+// folder is returned (unchanged behavior from before Faza 6).
 //
 // Attachments are joined with LEFT JOIN (one-to-many, fanning out rows).
 // Tags are pulled through a correlated GROUP_CONCAT subquery instead of a
@@ -35,8 +37,17 @@ fn split_tags(raw: Option<&str>) -> Vec<String> {
 // the result set and duplicating work needlessly. The subquery keeps the
 // row count driven only by attachments, while still being a single
 // statement (no per-note round trip / N+1).
+//
+// The tag filter is a single static query rather than two branches (one
+// with the filter, one without) - `(? IS NULL OR EXISTS (...))` lets SQLite
+// itself skip the EXISTS check entirely when no tag_id is bound, so there's
+// no need for dynamic SQL construction or a second sqlx::query! call site.
 #[tauri::command]
-pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<Vec<Note>, String> {
+pub async fn get_notes(
+    folder_id: String,
+    tag_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<Vec<Note>, String> {
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
@@ -66,10 +77,20 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
             ) as "tags?: String"
         FROM notes n
         LEFT JOIN attachments a ON a.note_id = n.id
-        WHERE n.folder_id = ? AND n.is_deleted = 0
+        WHERE n.folder_id = ?
+          AND n.is_deleted = 0
+          AND (
+                ? IS NULL
+                OR EXISTS (
+                    SELECT 1 FROM note_tags nt2
+                    WHERE nt2.note_id = n.id AND nt2.tag_id = ?
+                )
+              )
         ORDER BY n.created_at ASC
         "#,
-        folder_id
+        folder_id,
+        tag_id,
+        tag_id
     )
     .fetch_all(pool)
     .await

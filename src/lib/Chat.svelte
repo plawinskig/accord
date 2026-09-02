@@ -52,10 +52,14 @@
 		node.focus();
 	}
 
-	// Respond to `uiState.activeFolderId` changes and load the notes
+	// Respond to `uiState.activeFolderId` / `uiState.activeTagId` changes and
+	// (re)load the notes. Reading both inside the effect makes it re-run
+	// whenever either one changes - switching folders re-applies whatever
+	// tag filter is active, and toggling a tag filter re-queries the current
+	// folder.
 	$effect(() => {
 		if (uiState.activeFolderId) {
-			loadNotes(uiState.activeFolderId);
+			loadNotes(uiState.activeFolderId, uiState.activeTagId);
 			editingId = null;
 			pendingFiles = [];
 		}
@@ -78,9 +82,9 @@
 		}
 	});
 
-	async function loadNotes(folderId: string) {
+	async function loadNotes(folderId: string, tagId: string | null = null) {
 		try {
-			notes = await invoke('get_notes', { folderId });
+			notes = await invoke('get_notes', { folderId, tagId });
 		} catch (e) {
 			console.error('Failed to load notes', e);
 		}
@@ -321,7 +325,7 @@
 				// Clear the input and pending files, then reload the notes
 				newNoteContent = '';
 				pendingFiles = [];
-				await loadNotes(uiState.activeFolderId as string);
+				await loadNotes(uiState.activeFolderId as string, uiState.activeTagId);
 				
 			} catch (e) {
 				console.error('Failed to send note with attachments', e);
@@ -343,7 +347,7 @@
 		if (confirm('Are you sure you want to delete this note?')) {
 			try {
 				await invoke('soft_delete_note', { id });
-				await loadNotes(uiState.activeFolderId as string);
+				await loadNotes(uiState.activeFolderId as string, uiState.activeTagId);
 			} catch (e) { 
 				console.error('Failed to delete note', e); 
 			}
@@ -369,7 +373,7 @@
 			try {
 				await invoke('update_note', { id: editingId, content: editContent.trim() });
 				editingId = null;
-				await loadNotes(uiState.activeFolderId as string);
+				await loadNotes(uiState.activeFolderId as string, uiState.activeTagId);
 			} catch (e) {
 				console.error('Failed to update note', e);
 			}
