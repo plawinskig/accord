@@ -8,6 +8,7 @@ mod attachments;
 mod clipboard;
 mod constants;
 mod db;
+mod export;
 mod folders;
 mod notes;
 mod protocol;
@@ -55,6 +56,7 @@ fn main() {
             trash::get_trash,
             trash::restore_item,
             trash::empty_trash,
+            export::export_folder,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
