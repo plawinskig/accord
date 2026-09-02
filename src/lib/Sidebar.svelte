@@ -132,8 +132,9 @@
 {/snippet}
 
 <div class="flex h-full w-60 flex-col bg-surface-sidebar">
-	<div class="flex h-12 cursor-pointer items-center border-b border-surface-base px-4 font-bold text-white shadow-sm transition-colors hover:bg-surface-hover">
-		Accord Base
+	<div class="flex h-12 cursor-pointer items-center gap-3 border-b border-surface-base px-4 font-bold text-white shadow-sm transition-colors hover:bg-surface-hover">
+		<img src="/logo.png" alt="Accord Logo" class="h-6 w-6 object-contain" />
+		<span>Accord</span>
 	</div>
 
 	<div class="flex-1 overflow-y-auto p-2">
