@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        DELETE FROM notes WHERE is_deleted = 1 OR folder_id IN (\n            WITH RECURSIVE deleted_folders AS (\n                SELECT id FROM folders WHERE is_deleted = 1\n                UNION ALL SELECT f.id FROM folders f INNER JOIN deleted_folders df ON f.parent_id = df.id\n            ) SELECT id FROM deleted_folders\n        )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "dcbd061d612797ca9d25ddce70cd605adbc3235081b95730c70cca16738b2cd3"
+}

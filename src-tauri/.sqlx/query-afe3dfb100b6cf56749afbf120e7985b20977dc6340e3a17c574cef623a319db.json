@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM folders WHERE is_deleted = 1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "afe3dfb100b6cf56749afbf120e7985b20977dc6340e3a17c574cef623a319db"
+}
