@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT original_name as \"original_name!\", operation_type as \"operation_type!: OperationType\", local_path as \"local_path!\" FROM attachments WHERE note_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "original_name!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "operation_type!: OperationType",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "local_path!",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e289f07fc619b109eb6f0d481c615ae7619e13e8db334e0c6358328ff921c89c"
+}
