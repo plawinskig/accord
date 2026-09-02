@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE folders \n            SET is_deleted = 0, \n                parent_id = CASE \n                    WHEN parent_id IS NOT NULL \n                    AND (SELECT is_deleted FROM folders p WHERE p.id = folders.parent_id) = 1 \n                    THEN NULL \n                    ELSE parent_id \n                END \n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "0e0626942ec39d91b7e7f565749c1393aa027f057c603eb99d16b39bef837948"
+}
