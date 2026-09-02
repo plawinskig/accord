@@ -5,4 +5,5 @@ export const uiState = $state({
     highlightNoteId: null as string | null,
     activeTagId: null as string | null,
     refreshTagsTrigger: 0,
+    isTrashOpen: false,
 });

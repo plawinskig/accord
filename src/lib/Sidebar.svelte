@@ -93,7 +93,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div 
-		onclick={() => { uiState.activeFolderId = node.id; uiState.activeFolderName = node.name; }}
+		onclick={() => { uiState.activeFolderId = node.id; uiState.activeFolderName = node.name; uiState.isTrashOpen = false; }}
 		class="group flex cursor-pointer items-center justify-between rounded py-1.5 pr-2 transition-colors {uiState.activeFolderId === node.id ? 'bg-surface-active text-white' : 'text-gray-400 hover:bg-surface-hover hover:text-gray-200'}"
 		style="padding-left: calc(0.5rem + {depth} * 1rem);"
 	>
@@ -144,6 +144,15 @@
 	</div>
 
 	<div class="bg-surface-input-bg p-4">
+		<div class="mt-auto border-t border-surface-divider p-2">
+			<button 
+				onclick={() => { uiState.isTrashOpen = true; uiState.activeFolderId = null; uiState.activeTagId = null; }}
+				class="flex w-full items-center justify-center gap-2 rounded bg-surface-base py-2 text-sm text-gray-400 transition-colors hover:bg-surface-hover hover:text-white"
+			>
+				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+				Trash
+			</button>
+		</div>
 		<input
 			type="text"
 			bind:value={newFolderName}
