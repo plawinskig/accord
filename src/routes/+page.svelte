@@ -4,7 +4,7 @@
 	import { open } from '@tauri-apps/plugin-dialog';
 	import Sidebar from '$lib/Sidebar.svelte';
 	import Chat from '$lib/Chat.svelte';
-	import SearchBar from '$lib/SearchBar.svelte';
+	import RightSidebar from '$lib/RightSidebar.svelte';
 
 	let workspace: string | null = null;
 	let loading = true;
@@ -90,16 +90,7 @@
 			</div>
 
 			<!-- Render the right tags and search column -->
-			<div class="hidden w-87.5 bg-surface-sidebar border-l border-surface-base lg:flex lg:flex-col">
-				<!-- Render the search bar -->
-				<div class="flex h-12 items-center justify-end border-b border-surface-base px-4 shadow-sm">
-					<SearchBar />
-				</div>
-				<!-- Add tags here later -->
-				<div class="flex-1 p-4 text-center text-sm text-gray-500">
-					Tags will appear here
-				</div>
-			</div>
+			<RightSidebar />
 		</div>
 	{/if}
 </main>
