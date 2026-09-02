@@ -4,6 +4,8 @@
 	import { getCurrentWebview } from '@tauri-apps/api/webview';
 	import { onMount, onDestroy } from 'svelte';
 	import { uiState } from '$lib/state.svelte';
+	import { marked } from 'marked';
+	import DOMPurify from 'dompurify';
 
 	interface Attachment {
 		id: string;
@@ -477,7 +479,9 @@
 					{#if editingId === note.id}
 						<textarea bind:value={editContent} onkeydown={saveEdit} use:focusOnMount class="min-h-15 w-full resize-none rounded bg-surface-input p-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Press Enter to save"></textarea>
 					{:else}
-						<p class="whitespace-pre-wrap text-sm text-gray-200">{note.content}</p>
+						<div class="text-sm text-gray-200 [&_a]:text-indigo-400 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-surface-divider [&_blockquote]:pl-3 [&_blockquote]:italic [&_code]:rounded [&_code]:bg-surface-base [&_code]:px-1.5 [&_code]:py-0.5 [&_p]:mb-2 [&_pre]:mb-2 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:border-surface-divider [&_pre]:bg-surface-base [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0">
+							{@html DOMPurify.sanitize(marked.parse(note.content, { async: false }) as string)}
+						</div>
 					{/if}
 
 					<!-- Rendering pinned tags as pills -->
