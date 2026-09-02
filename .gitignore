@@ -38,3 +38,9 @@ Thumbs.db
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+*.db
+*.db-shm
+*.db-wal
+
+# .sqlx/

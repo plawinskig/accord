@@ -13,12 +13,18 @@
 		mime_type: string;
 	}
 
+	interface Tag {
+		id: string;
+		name: string;
+	}
+
 	interface Note {
 		id: string;
 		content: string;
 		created_at: string;
 		updated_at: string;
 		attachments: Attachment[] | null;
+		tags: Tag[] | null;
 	}
 
 	interface PendingFile {
@@ -47,15 +53,24 @@
 	// Keep a reference to the notes container for automatic scrolling
 	let chatContainer = $state<HTMLElement>();
 
+	// State for the Tag Selection Modal
+	let tagDialog = $state<{ noteId: string } | null>(null);
+	let tagInput = $state('');
+	let availableTags = $state<Tag[]>([]);
+
 	// Focus an element while bypassing a11y_autofocus
 	function focusOnMount(node: HTMLElement) {
 		node.focus();
 	}
 
-	// Respond to `uiState.activeFolderId` changes and load the notes
+	// Respond to `uiState.activeFolderId` / `uiState.activeTagId` changes and
+	// (re)load the notes. Reading both inside the effect makes it re-run
+	// whenever either one changes - switching folders re-applies whatever
+	// tag filter is active, and toggling a tag filter re-queries the current
+	// folder.
 	$effect(() => {
 		if (uiState.activeFolderId) {
-			loadNotes(uiState.activeFolderId);
+			loadNotes(uiState.activeFolderId, uiState.activeTagId);
 			editingId = null;
 			pendingFiles = [];
 		}
@@ -78,13 +93,55 @@
 		}
 	});
 
-	async function loadNotes(folderId: string) {
+	async function loadNotes(folderId: string, tagId: string | null = null) {
 		try {
-			notes = await invoke('get_notes', { folderId });
+			notes = await invoke('get_notes', { folderId, tagId });
 		} catch (e) {
 			console.error('Failed to load notes', e);
 		}
 	}
+
+	// Manual Tag Attachment Support
+	async function openTagPicker(note: Note) {
+		tagDialog = { noteId: note.id };
+		tagInput = '';
+		try {
+			const allTags: Tag[] = await invoke('get_all_tags');
+			const noteTagIds = note.tags?.map(t => t.id) || [];
+			availableTags = allTags.filter(t => !noteTagIds.includes(t.id));
+		} catch (e) {
+			console.error('Failed to load tags for picker', e);
+		}
+	}
+
+	function closeTagPicker() {
+		tagDialog = null;
+		tagInput = '';
+	}
+
+	async function submitTagPicker(tagName: string) {
+		if (!tagDialog || !tagName.trim()) return;
+		try {
+			await invoke('attach_tag', { noteId: tagDialog.noteId, tagName: tagName.trim() });
+			uiState.refreshTagsTrigger++;
+			await loadNotes(uiState.activeFolderId as string, uiState.activeTagId);
+		} catch (e) {
+			console.error('Failed to attach tag', e);
+		}
+		closeTagPicker();
+	}
+
+	// Removing a Tag from a Note
+	async function removeNoteTag(noteId: string, tagId: string) {
+		try {
+			await invoke('detach_tag', { noteId, tagId });
+			uiState.refreshTagsTrigger++;
+			await loadNotes(uiState.activeFolderId as string, uiState.activeTagId);
+		} catch (e) {
+			console.error('Failed to detach tag', e);
+		}
+	}
+
 
 	// On Linux, ask the backend for clipboard contents when WebKitGTK does not
 	// expose an image through e.clipboardData.items. Block the default paste when
@@ -319,9 +376,10 @@
 				}
 
 				// Clear the input and pending files, then reload the notes
+				uiState.refreshTagsTrigger++;
 				newNoteContent = '';
 				pendingFiles = [];
-				await loadNotes(uiState.activeFolderId as string);
+				await loadNotes(uiState.activeFolderId as string, uiState.activeTagId);
 				
 			} catch (e) {
 				console.error('Failed to send note with attachments', e);
@@ -343,7 +401,7 @@
 		if (confirm('Are you sure you want to delete this note?')) {
 			try {
 				await invoke('soft_delete_note', { id });
-				await loadNotes(uiState.activeFolderId as string);
+				await loadNotes(uiState.activeFolderId as string, uiState.activeTagId);
 			} catch (e) { 
 				console.error('Failed to delete note', e); 
 			}
@@ -369,7 +427,8 @@
 			try {
 				await invoke('update_note', { id: editingId, content: editContent.trim() });
 				editingId = null;
-				await loadNotes(uiState.activeFolderId as string);
+				uiState.refreshTagsTrigger++;
+				await loadNotes(uiState.activeFolderId as string, uiState.activeTagId);
 			} catch (e) {
 				console.error('Failed to update note', e);
 			}
@@ -402,6 +461,10 @@
 						
 						<!-- Show editing controls -->
 						<div class="absolute -top-3 right-4 hidden space-x-2 rounded-md border border-surface-divider bg-surface-chat px-2 py-1 shadow-sm group-hover:flex">
+							<!-- Add an icon to open the tag picker -->
+							<button onclick={() => openTagPicker(note)} class="text-gray-400 hover:text-green-400" title="Add tag">
+								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+							</button>
 							<button onclick={() => startEdit(note)} class="text-gray-400 hover:text-indigo-400" title="Edit">
 								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
 							</button>
@@ -415,6 +478,24 @@
 						<textarea bind:value={editContent} onkeydown={saveEdit} use:focusOnMount class="min-h-15 w-full resize-none rounded bg-surface-input p-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Press Enter to save"></textarea>
 					{:else}
 						<p class="whitespace-pre-wrap text-sm text-gray-200">{note.content}</p>
+					{/if}
+
+					<!-- Rendering pinned tags as pills -->
+					{#if note.tags && note.tags.length > 0}
+						<div class="mt-2 flex flex-wrap gap-1.5">
+							{#each note.tags as tag}
+								<div class="group/tag flex items-center gap-1 rounded bg-surface-active px-2 py-0.5 text-xs text-gray-300">
+									<span>{tag.name}</span>
+									<button 
+										onclick={() => removeNoteTag(note.id, tag.id)} 
+										class="text-gray-500 hover:text-red-400 opacity-0 group-hover/tag:opacity-100 transition-opacity" 
+										title="Remove tag from note"
+									>
+										<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+									</button>
+								</div>
+							{/each}
+						</div>
 					{/if}
 
 					<!-- Render attachments -->
@@ -484,6 +565,7 @@
 	{/if}
 </div>
 
+<!-- File Operation Selection Dialog Box -->
 {#if opDialog}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -524,11 +606,42 @@
 					<span class="block text-xs text-gray-400">Reference the file in place, don't copy it</span>
 				</button>
 			</div>
+			<button onclick={() => chooseOperation(null)} class="mt-3 w-full rounded-md px-3 py-1.5 text-center text-xs text-gray-400 hover:text-gray-200">Cancel</button>
+		</div>
+	</div>
+{/if}
 
-			<button
-				onclick={() => chooseOperation(null)}
-				class="mt-3 w-full rounded-md px-3 py-1.5 text-center text-xs text-gray-400 hover:text-gray-200"
-			>
+<!-- Modal for Manual Tag Attachment -->
+{#if tagDialog}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onclick={closeTagPicker} onkeydown={(e) => { if (e.key === 'Escape') closeTagPicker(); }}>
+		<div class="w-80 rounded-lg border border-surface-divider bg-surface-sidebar p-4 shadow-xl" onclick={(e) => e.stopPropagation()}>
+			<h3 class="mb-2 text-sm font-semibold text-white">Add Tag</h3>
+			
+			<input 
+				type="text" 
+				bind:value={tagInput} 
+				use:focusOnMount 
+				onkeydown={(e) => { if (e.key === 'Enter') submitTagPicker(tagInput); }} 
+				placeholder="Type tag name and press Enter..." 
+				class="mb-3 w-full rounded bg-surface-input px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500" 
+			/>
+			
+			{#if availableTags.filter(t => t.name.toLowerCase().includes(tagInput.toLowerCase())).length > 0}
+				<div class="mb-2 max-h-40 space-y-1 overflow-y-auto">
+					{#each availableTags.filter(t => t.name.toLowerCase().includes(tagInput.toLowerCase())) as tag}
+						<button 
+							onclick={() => submitTagPicker(tag.name)} 
+							class="w-full rounded px-2 py-1.5 text-left text-sm text-gray-300 hover:bg-surface-active hover:text-white"
+						>
+							{tag.name}
+						</button>
+					{/each}
+				</div>
+			{/if}
+
+			<button onclick={closeTagPicker} class="mt-2 w-full text-center text-xs text-gray-400 hover:text-gray-200">
 				Cancel
 			</button>
 		</div>

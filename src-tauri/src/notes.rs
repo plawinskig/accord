@@ -12,12 +12,52 @@ pub struct Note {
     pub created_at: String,
     pub updated_at: String,
     pub attachments: Option<Vec<crate::attachments::Attachment>>,
+    pub tags: Vec<crate::tags::Tag>,
 }
 
-// Download all notes from a specific folder, along with their attachments,
-// in a single query (LEFT JOIN) instead of one attachments query per note.
+/// Splits the `GROUP_CONCAT`-ed tag names coming back from the query into a
+/// `Vec<crate::tags::Tag>`, treating both SQL NULL (no tags) and an empty string the
+/// same way: no tags.
+fn split_tags(raw: Option<&str>) -> Vec<crate::tags::Tag> {
+    match raw {
+        Some(s) if !s.is_empty() => s
+            .split(',')
+            .filter_map(|t| {
+                let (id, name) = t.split_once('|')?;
+
+                Some(crate::tags::Tag {
+                    id: id.to_string(),
+                    name: name.to_string(),
+                })
+            })
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+// Download all notes from a specific folder, along with their attachments
+// and tags, in a single query. `tag_id` is an optional filter: when Some,
+// only notes carrying that tag are returned; when None, every note in the
+// folder is returned (unchanged behavior from before Faza 6).
+//
+// Attachments are joined with LEFT JOIN (one-to-many, fanning out rows).
+// Tags are pulled through a correlated GROUP_CONCAT subquery instead of a
+// second LEFT JOIN - joining two one-to-many relations directly in the same
+// query would multiply rows (M attachments x N tags per note), inflating
+// the result set and duplicating work needlessly. The subquery keeps the
+// row count driven only by attachments, while still being a single
+// statement (no per-note round trip / N+1).
+//
+// The tag filter is a single static query rather than two branches (one
+// with the filter, one without) - `(? IS NULL OR EXISTS (...))` lets SQLite
+// itself skip the EXISTS check entirely when no tag_id is bound, so there's
+// no need for dynamic SQL construction or a second sqlx::query! call site.
 #[tauri::command]
-pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<Vec<Note>, String> {
+pub async fn get_notes(
+    folder_id: String,
+    tag_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<Vec<Note>, String> {
     let db_guard = state.db.lock().await;
     let pool = db_guard.as_ref().ok_or("Database not connected")?;
 
@@ -38,13 +78,29 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
             a.original_name as "att_original_name?",
             a.operation_type as "att_operation_type?: crate::attachments::OperationType",
             a.local_path as "att_local_path?",
-            a.mime_type as "att_mime_type?"
+            a.mime_type as "att_mime_type?",
+            (
+                SELECT GROUP_CONCAT(t.id || '|' || t.name, ',')
+                FROM note_tags nt
+                JOIN tags t ON t.id = nt.tag_id
+                WHERE nt.note_id = n.id
+            ) as "tags?: String"
         FROM notes n
         LEFT JOIN attachments a ON a.note_id = n.id
-        WHERE n.folder_id = ? AND n.is_deleted = 0
+        WHERE n.folder_id = ?
+          AND n.is_deleted = 0
+          AND (
+                ? IS NULL
+                OR EXISTS (
+                    SELECT 1 FROM note_tags nt2
+                    WHERE nt2.note_id = n.id AND nt2.tag_id = ?
+                )
+              )
         ORDER BY n.created_at ASC
         "#,
-        folder_id
+        folder_id,
+        tag_id,
+        tag_id
     )
     .fetch_all(pool)
     .await
@@ -65,6 +121,7 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
                     created_at: row.created_at.clone(),
                     updated_at: row.updated_at.clone(),
                     attachments: Some(Vec::new()),
+                    tags: split_tags(row.tags.as_deref()),
                 });
                 notes.len() - 1
             });
@@ -102,7 +159,8 @@ pub async fn get_notes(folder_id: String, state: State<'_, AppState>) -> Result<
     Ok(notes)
 }
 
-// Add a new note
+// Add a new note. Any `#tag` tokens found in the content are auto-detected
+// and attached (creating the tag if it's new) before the note is returned.
 #[tauri::command]
 pub async fn create_note(
     folder_id: String,
@@ -123,6 +181,10 @@ pub async fn create_note(
     .execute(pool)
     .await
     .map_err(|e| e.to_string())?;
+
+    let detected_tags = crate::tags::sync_tags_from_content(pool, &id, &content)
+        .await
+        .map_err(|e| e.to_string())?;
 
     let record = sqlx::query!(
         r#"
@@ -148,10 +210,16 @@ pub async fn create_note(
         created_at: record.created_at,
         updated_at: record.updated_at,
         attachments: Some(vec![]),
+        // A brand new note can't have any manually-attached tags yet, so the
+        // freshly detected ones are the complete set - no need to re-query.
+        tags: detected_tags,
     })
 }
 
-// Edit the note
+// Edit the note. Re-runs `#tag` auto-detection on the new content so tags
+// added during an edit get attached too (existing tags, whether detected
+// earlier or attached manually via the tag picker, are never removed here -
+// only `detach_tag` removes a tag from a note).
 #[tauri::command]
 pub async fn update_note(
     id: String,
@@ -169,6 +237,10 @@ pub async fn update_note(
     .execute(pool)
     .await
     .map_err(|e| e.to_string())?;
+
+    crate::tags::sync_tags_from_content(pool, &id, &content)
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
