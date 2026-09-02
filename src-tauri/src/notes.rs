@@ -12,15 +12,25 @@ pub struct Note {
     pub created_at: String,
     pub updated_at: String,
     pub attachments: Option<Vec<crate::attachments::Attachment>>,
-    pub tags: Vec<String>,
+    pub tags: Vec<crate::tags::Tag>,
 }
 
 /// Splits the `GROUP_CONCAT`-ed tag names coming back from the query into a
-/// `Vec<String>`, treating both SQL NULL (no tags) and an empty string the
+/// `Vec<crate::tags::Tag>`, treating both SQL NULL (no tags) and an empty string the
 /// same way: no tags.
-fn split_tags(raw: Option<&str>) -> Vec<String> {
+fn split_tags(raw: Option<&str>) -> Vec<crate::tags::Tag> {
     match raw {
-        Some(s) if !s.is_empty() => s.split(',').map(|t| t.to_string()).collect(),
+        Some(s) if !s.is_empty() => s
+            .split(',')
+            .filter_map(|t| {
+                let (id, name) = t.split_once('|')?;
+
+                Some(crate::tags::Tag {
+                    id: id.to_string(),
+                    name: name.to_string(),
+                })
+            })
+            .collect(),
         _ => Vec::new(),
     }
 }
@@ -70,7 +80,7 @@ pub async fn get_notes(
             a.local_path as "att_local_path?",
             a.mime_type as "att_mime_type?",
             (
-                SELECT GROUP_CONCAT(t.name, ',')
+                SELECT GROUP_CONCAT(t.id || '|' || t.name, ',')
                 FROM note_tags nt
                 JOIN tags t ON t.id = nt.tag_id
                 WHERE nt.note_id = n.id

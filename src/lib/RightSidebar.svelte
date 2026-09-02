@@ -42,6 +42,11 @@
 		}
 	}
 
+	$effect(() => {
+		uiState.refreshTagsTrigger;
+		loadTags();
+	});
+
 	onMount(() => {
 		loadTags();
 	});

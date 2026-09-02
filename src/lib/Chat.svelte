@@ -123,6 +123,7 @@
 		if (!tagDialog || !tagName.trim()) return;
 		try {
 			await invoke('attach_tag', { noteId: tagDialog.noteId, tagName: tagName.trim() });
+			uiState.refreshTagsTrigger++;
 			await loadNotes(uiState.activeFolderId as string, uiState.activeTagId);
 		} catch (e) {
 			console.error('Failed to attach tag', e);
@@ -134,6 +135,7 @@
 	async function removeNoteTag(noteId: string, tagId: string) {
 		try {
 			await invoke('detach_tag', { noteId, tagId });
+			uiState.refreshTagsTrigger++;
 			await loadNotes(uiState.activeFolderId as string, uiState.activeTagId);
 		} catch (e) {
 			console.error('Failed to detach tag', e);
@@ -374,6 +376,7 @@
 				}
 
 				// Clear the input and pending files, then reload the notes
+				uiState.refreshTagsTrigger++;
 				newNoteContent = '';
 				pendingFiles = [];
 				await loadNotes(uiState.activeFolderId as string, uiState.activeTagId);
@@ -424,6 +427,7 @@
 			try {
 				await invoke('update_note', { id: editingId, content: editContent.trim() });
 				editingId = null;
+				uiState.refreshTagsTrigger++;
 				await loadNotes(uiState.activeFolderId as string, uiState.activeTagId);
 			} catch (e) {
 				console.error('Failed to update note', e);

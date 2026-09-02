@@ -87,14 +87,14 @@ async fn find_or_create_tag(pool: &sqlx::SqlitePool, name: &str) -> Result<Strin
 }
 
 /// Ensures every given tag name exists in `tags` and is linked to `note_id`
-/// in `note_tags`. Shared by the `#tag` auto-detection (create_note /
-/// update_note) and by the manual attach_tag command - both paths converge
-/// on the same note_tags table, so it doesn't matter which UI the user used.
+/// in `note_tags`. Returns a vector of the attached `Tag` objects.
 pub async fn ensure_tags_for_note(
     pool: &sqlx::SqlitePool,
     note_id: &str,
     tag_names: &[String],
-) -> Result<(), sqlx::Error> {
+) -> Result<Vec<Tag>, sqlx::Error> {
+    let mut attached_tags = Vec::new();
+
     for name in tag_names {
         let tag_id = find_or_create_tag(pool, name).await?;
         sqlx::query!(
@@ -104,27 +104,30 @@ pub async fn ensure_tags_for_note(
         )
         .execute(pool)
         .await?;
+
+        attached_tags.push(Tag {
+            id: tag_id,
+            name: name.clone(),
+        });
     }
-    Ok(())
+
+    Ok(attached_tags)
 }
 
 /// Parses `#tag` tokens out of note content and ensures each detected tag
-/// is attached to `note_id` (creating tags that don't exist yet). This is
-/// the single place where "detect tags in content, then attach them" lives -
-/// both `notes::create_note` and `notes::update_note` call this instead of
-/// each re-implementing the parse-then-ensure sequence.
+/// is attached to `note_id`. Returns a vector of the attached `Tag` objects.
 pub async fn sync_tags_from_content(
     pool: &sqlx::SqlitePool,
     note_id: &str,
     content: &str,
-) -> Result<Vec<String>, sqlx::Error> {
+) -> Result<Vec<Tag>, sqlx::Error> {
     let detected_tags = parse_tags_from_content(content);
 
     if !detected_tags.is_empty() {
-        ensure_tags_for_note(pool, note_id, &detected_tags).await?;
+        ensure_tags_for_note(pool, note_id, &detected_tags).await
+    } else {
+        Ok(Vec::new())
     }
-
-    Ok(detected_tags)
 }
 
 /// Returns every tag in the workspace, for the global list in the right

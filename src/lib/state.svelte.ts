@@ -4,4 +4,5 @@ export const uiState = $state({
     activeFolderName: null as string | null,
     highlightNoteId: null as string | null,
     activeTagId: null as string | null,
+    refreshTagsTrigger: 0,
 });
