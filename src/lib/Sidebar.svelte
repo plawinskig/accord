@@ -144,21 +144,23 @@
 	</div>
 
 	<div class="bg-surface-input-bg p-4">
-		<div class="mt-auto border-t border-surface-divider p-2">
+		<div class="mt-auto flex flex-col border-t border-surface-divider bg-surface-sidebar">
 			<button 
 				onclick={() => { uiState.isTrashOpen = true; uiState.activeFolderId = null; uiState.activeTagId = null; }}
-				class="flex w-full items-center justify-center gap-2 rounded bg-surface-base py-2 text-sm text-gray-400 transition-colors hover:bg-surface-hover hover:text-white"
+				class="flex items-center justify-center gap-2 py-3 text-sm text-gray-400 transition-colors hover:bg-surface-hover hover:text-white"
 			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-				Trash
+				Open Trash
 			</button>
 		</div>
-		<input
-			type="text"
-			bind:value={newFolderName}
-			onkeydown={addRootFolder}
-			placeholder="Create root channel..."
-			class="w-full rounded bg-surface-base px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-		/>
+		<div class="p-3 pt-0">
+			<input
+				type="text"
+				bind:value={newFolderName}
+				onkeydown={addRootFolder}
+				placeholder="Create root channel..."
+				class="w-full rounded bg-surface-input px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+			/>
+		</div>
 	</div>
 </div>
