@@ -1,36 +1,46 @@
 # Accord
 
-Accord is a local application for creating and organizing markdown notes with support for folders, tags, attachments, and search. It runs as a desktop client built with Tauri, SvelteKit, and SQLite, so all data is stored locally on the user's machine.
+Accord is a local, private knowledge base and markdown note-taking application inspired by chat interfaces. Built as a high-performance desktop client with Tauri, SvelteKit, and SQLite, it ensures all your data, configuration, and attachments are stored securely on your local machine.
 
 ## Features
 
-- Organize notes in a hierarchy of folders and subfolders
-- Markdown-based notes with content preview
-- Automatic detection of tags like ::tag inside note content
-- Global tag list with tag-based filtering
-- Full-text search across the workspace
-- Trash with restore and permanent delete actions
-- Attachments for notes: copy, move, and link support
-- Export a folder to a Markdown file
-- Local SQLite storage in a dedicated workspace directory
+* **Nested Channels:** Organize notes in a recursive hierarchy of folders and subfolders.
+* **Markdown Chat Interface:** Chat-like note creation with full Markdown support and DOMpurify XSS protection.
+* **Auto-detected Tags:** Automatic extraction and normalization of tags (e.g., `::tag`) directly from note content.
+
+
+* **Global Tag Filtering:** A dedicated sidebar for global tag management and real-time cross-filtering.
+* **Advanced Search:** Lightning-fast full-text search (FTS5) across the workspace with context snippets.
+* **Robust Attachments:** Support for Drag & Drop and native clipboard pasting (Ctrl+V), including a native OS bypass for reliable image parsing on Linux.
+
+
+* **Smart File Handling:** Attach files in three modes (`COPY`, `MOVE`, `LINK`) rendered securely via a custom `accord://` protocol.
+
+
+* **Safe Trash System:** Soft-delete functionality with restore capabilities and a permanent hard-delete that cascades through the database and physical drive.
+
+
+* **Markdown Export:** Export entire folders to `.md` files with correctly mapped attachment links.
 
 ## Architecture
 
-- Frontend: SvelteKit + TypeScript + Vite
-- Desktop shell: Tauri 2
-- Backend: Rust + SQLx + SQLite
-- Workspace configuration: saved in the system config directory
+* **Frontend:** Svelte 5 (Runes) + TypeScript + Tailwind CSS v4 + Vite
+* **Desktop Shell:** Tauri 2
+* **Backend:** Rust + SQLx
+* **Database:** SQLite running in Write-Ahead Logging (WAL) mode with foreign key enforcement for data integrity.
+
+
 
 ## Requirements
 
-Before running the app, make sure you have installed:
+Ensure the following prerequisites are met before running the application:
 
-- Node.js 18+ or newer
-- npm
-- Rust stable
-- Tauri prerequisites for your operating system
+* Node.js 18+ or newer
+* npm
+* Rust stable
+* Tauri prerequisites for your operating system
 
-On Linux, an additional set of GUI and system libraries may be required.
+*Note for Linux users: An additional set of GUI and system libraries (such as `webkit2gtk` and GTK dependencies) may be required.*
 
 ## Installation
 
@@ -39,133 +49,86 @@ On Linux, an additional set of GUI and system libraries may be required.
 ```bash
 git clone https://github.com/plawinskig/accord.git
 cd accord
+
 ```
 
 2. Install JavaScript dependencies:
 
 ```bash
 npm install
+
 ```
 
-3. Start the app in development mode:
+3. Start the application in development mode:
 
 ```bash
 npm run tauri dev
+
 ```
 
 ## Scripts
 
-From the project root:
+**From the project root (Frontend & Tauri):**
 
 ```bash
-npm run dev
-npm run build
-npm run preview
-npm run check
-npm run tauri dev
+npm run dev         # Start frontend-only dev server
+npm run build       # Build frontend for production
+npm run preview     # Preview production build
+npm run check       # Run Svelte sync and typechecking
+npm run tauri dev   # Start full desktop app in dev mode
+npm run tauri build # Compile the final executable/bundle
+
 ```
 
-From the `src-tauri` directory:
+**From the `src-tauri` directory (Rust Backend):**
 
 ```bash
 cargo check
 cargo clippy -- -D warnings
 cargo fmt
-cargo sqlx database create
-cargo sqlx migrate run
+cargo sqlx database setup # Create database and run migrations
+cargo sqlx prepare        # Freeze SQLx queries for offline compile-time verification
+
 ```
 
-## Project structure
+## Project Structure
 
 ```text
 accord/
 ├── src/                     # SvelteKit frontend
-│   ├── lib/                 # app components and UI state
-│   └── routes/              # application views
+│   ├── lib/                 # App components and UI state (Runes)
+│   └── routes/              # Application views (+page.svelte)
 ├── src-tauri/               # Tauri backend and Rust logic
-│   ├── src/                 # application modules: notes, folders, tags, search, trash
-│   ├── migrations/          # SQLite migrations
-│   ├── capabilities/        # Tauri permissions
+│   ├── src/                 # Rust modules: notes, folders, tags, attachments, protocol, trash
+│   ├── migrations/          # SQLite schema migrations
 │   ├── Cargo.toml           # Rust configuration
-│   └── tauri.conf.json      # Tauri configuration
-├── static/                  # static frontend assets
+│   └── tauri.conf.json      # Tauri application configuration
+├── static/                  # Static frontend assets (e.g., logos)
 ├── package.json             # npm scripts and frontend dependencies
 ├── svelte.config.js
 ├── vite.config.js
-├── tsconfig.json
-├── README.md
-└── .gitignore
+└── README.md
+
 ```
 
-## How it works
+## Core Concepts
 
-On first launch, the user selects a working folder where Accord stores:
+### Workspace
 
-- the SQLite database with notes,
-- the attachments directory,
-- the workspace configuration.
+On the first launch, the user selects a working directory. Accord automatically provisions this folder with the SQLite database file and a hidden `attachments/` directory. Because the backend is entirely local, data is never dependent on cloud services.
 
-Then the user can create channels (folders), add notes, attach tags, and import files. The app uses a local backend, so data is not dependent on a cloud service or external server.
+### Notes and Tags
 
-## Notes and tags
+Tags are automatically detected from trigger patterns within the text (e.g., `::work`, `::important`). The backend normalizes these tags, stores them uniquely, and binds them to the note via a many-to-many relationship. Users can filter notes dynamically using the right-side panel.
 
-Tags are automatically detected from patterns such as:
+### Attachments
 
-```text
-::work
-::important
-::ideas
-```
+Files dropped into the chat or selected via the picker can be handled in three ways:
 
-Tags are normalized and stored in the database, and can then be filtered from the right-side panel.
+* **COPY** — Duplicates the original file into the workspace's attachments folder.
+* **MOVE** — Relocates the original file directly into the workspace.
+* **LINK** — Retains the file in its original location, saving only an absolute reference in the database.
 
-## Attachments
+### Trash System
 
-Files can be attached to notes in three modes:
-
-- `COPY` — copy the file into the workspace directory
-- `MOVE` — move the file into the workspace directory
-- `LINK` — keep a link to the original file
-
-## Search
-
-The search feature uses SQLite FTS (Full Text Search), allowing fast retrieval of note content by phrase or keyword. Results show a snippet of the text along with the folder name and creation date.
-
-## Trash
-
-Instead of deleting items immediately, they are moved to the trash. From there, users can:
-
-- restore a folder or note,
-- permanently empty the trash,
-- remove associated attachment files physically.
-
-## Export
-
-It is possible to export an entire folder to a Markdown file. The file includes the folder header, note content, and a list of attachments as links.
-
-## Development
-
-To start working on the project:
-
-```bash
-npm install
-npm run tauri dev
-```
-
-Useful tools for further development:
-
-- VS Code
-- Svelte and Tauri extensions
-- Rust Analyzer
-
-## License
-
-This project is distributed under the MIT license.
-
-## Author
-
-Accord is a personal / experimental project developed locally in a desktop environment.
-
-## Status
-
-The project is actively being developed and currently includes core functionality for managing notes, tags, folders, and workspace data.
+Instead of immediate deletion, deleted folders and notes are flagged as `is_deleted = 1`. From the Trash panel, users can restore items or permanently empty the trash. Hard deletion utilizes recursive Common Table Expressions (CTEs) and `ON DELETE CASCADE` constraints to safely wipe orphaned data and physical files.
